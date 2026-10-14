@@ -187,7 +187,10 @@ class Desk:
             reps = {"kestrel": k}
             step("PRISM", f"{tag}: reading chart ({direction})")
             reps["prism"] = self.prism.analyse(key, data[key], direction)                     # 2) PRISM
-            emit("PRISM", "done", f"{tag}: {reps['prism'].verdict} {reps['prism'].score:+.2f}")
+            pdx = reps["prism"].details
+            ktxt = (f" · KST {pdx['kst']:+.1f} vs sig {pdx['kst_signal']:+.1f} ({pdx['kst_state']})"
+                    if pdx.get("kst") is not None else "")
+            emit("PRISM", "done", f"{tag}: {reps['prism'].verdict} {reps['prism'].score:+.2f}{ktxt}")
             step("HERALD", f"{tag}: scoring {len(news.get(key, []))} headlines")
             reps["herald"] = self.herald.analyse(key, news.get(key, []))                      # 3) HERALD
             emit("HERALD", "done", f"{tag}: {reps['herald'].verdict} {reps['herald'].score:+.2f}")
@@ -210,6 +213,8 @@ class Desk:
             if st and note:
                 final.details["reason"] += f" · {note}"
             reps["arbiter"] = final
+            if pdx.get("kst_confirms") and final.verdict in ("TRADE", "WAIT"):
+                final.details["reason"] += " · KST confirms momentum" + (" (fresh crossover)" if pdx.get("kst_cross") else "")
             emit("ARBITER", "decision", f"{tag} {direction} → {final.verdict} ({final.details['composite']:+.2f}) "
                                         f"{st['label'] if st else ''} · {final.details['reason']}")
             self.book.log_decision(key, direction, st["type"] if st else None, final.verdict,

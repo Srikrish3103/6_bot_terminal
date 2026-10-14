@@ -1,7 +1,9 @@
 """PRISM — finds the chart setup: trend, volume, support, resistance, entry/stop/target."""
 from __future__ import annotations
 
-from core.indicators import ema, rsi, atr, macd
+import math
+
+from core.indicators import ema, rsi, atr, macd, kst
 from .base import Agent, clip
 
 
@@ -17,6 +19,9 @@ class Prism(Agent):
         r = float(rsi(c).iloc[-1])
         _, _, hist = macd(c)
         h_now, h_prev = float(hist.iloc[-1]), float(hist.iloc[-3])
+        k_line, k_sig = kst(c)
+        k_now, s_now = float(k_line.iloc[-1]), float(k_sig.iloc[-1])
+        k_prev, s_prev = float(k_line.iloc[-2]), float(k_sig.iloc[-2])
         a = float(atr(df).iloc[-1])
         lb = pc["sr_lookback"]
         support = float(df["Low"].tail(lb).min())
@@ -26,6 +31,15 @@ class Prism(Agent):
         stack = (1 if e20 > e50 > e200 else -1 if e20 < e50 < e200 else 0) * d
         above = (1 if px > e20 else -1) * d
         mom = (1 if h_now > 0 else -1) * d * (1 if (h_now - h_prev) * d > 0 else 0.5)
+        # KST: above its signal (and rising vs zero) = momentum confirms the trade direction
+        kst_ok = not (math.isnan(k_now) or math.isnan(s_now))
+        if kst_ok:
+            gap = (k_now - s_now) * d
+            cross = (k_prev - s_prev) * d <= 0 < gap
+            k_s = clip((1 if gap > 0 else -1) * (1.0 if (k_now * d > 0) == (gap > 0) else 0.6))
+            k_state = ("bullish" if k_now > s_now else "bearish") + (" crossover" if cross else "")
+        else:
+            gap, cross, k_s, k_state = 0.0, False, 0.0, "n/a (<53 bars)"
         if d == 1:
             rsi_s = 1 if 50 <= r <= 68 else 0.3 if 45 <= r < 50 else -0.5 if r > 75 else -1 if r < 40 else 0
         else:
@@ -40,7 +54,9 @@ class Prism(Agent):
         else:
             vol_s, vol_txt = 0.0, "N/A (FX)"
 
-        score = clip(0.30 * stack + 0.15 * above + 0.20 * mom + 0.20 * rsi_s + 0.15 * vol_s)
+        w = pc.get("weights", {"trend": 0.28, "price_vs_ema20": 0.12, "macd": 0.15, "kst": 0.15, "rsi": 0.15, "volume": 0.15})
+        score = clip(w["trend"] * stack + w["price_vs_ema20"] * above + w["macd"] * mom + w["kst"] * k_s
+                     + w["rsi"] * rsi_s + w["volume"] * vol_s)
 
         # --- trade plan
         if d == 1:
@@ -55,6 +71,14 @@ class Prism(Agent):
 
         status = "SETUP" if score >= 0.5 else "WATCH" if score >= 0.2 else "NO SETUP"
         notes = []
+        if kst_ok:
+            side = "above" if k_now > s_now else "below"
+            good = gap > 0
+            msg = (f"KST {k_now:+.1f} {side} signal {s_now:+.1f}"
+                   + (" — fresh crossover" if cross else "")
+                   + (f", {'above' if k_now > 0 else 'below'} zero")
+                   + (" → momentum confirms, KST supports this pick" if good else " → KST against this direction"))
+            notes.insert(0, msg)
         if breakout:
             notes.append("Price at 20-bar extreme — breakout attempt")
         if (d == 1 and r > 75) or (d == -1 and r < 25):
@@ -64,5 +88,8 @@ class Prism(Agent):
             "volume": vol_txt, "rsi": round(r, 1), "ema20": e20, "ema50": e50, "ema200": e200,
             "support": support, "resistance": resistance, "atr": a,
             "entry": px, "stop": stop, "target": target, "rr": pc["target_rr"], "breakout": breakout,
+            "kst": round(k_now, 2) if kst_ok else None, "kst_signal": round(s_now, 2) if kst_ok else None,
+            "kst_state": k_state, "kst_confirms": bool(kst_ok and gap > 0), "kst_cross": bool(cross),
+            "macd_hist": round(h_now, 4),
         }
         return self.report(sym, score * d, status, "HIGH" if abs(score) > 0.65 else "MODERATE", details, notes)

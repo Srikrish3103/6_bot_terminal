@@ -283,7 +283,8 @@ function card(r){
     <div class="reason">${esc(ar.details.reason)}</div>
     <details data-k="${esc(r.key)}" ${openSet.has(r.key)?"open":""} ontoggle="tog(this)"><summary>Why — agent reports &amp; risk checks</summary><div class="why">
       ${a.why_structure ? `<div><b>Structure:</b> ${esc(a.structure)} — ${esc(a.why_structure)}</div>` : ""}
-      <div><b>Chart:</b> trend ${esc(p.trend)}, RSI ${p.rsi}, volume ${esc(p.volume)}, support ${px(p.support)} / resistance ${px(p.resistance)}</div>
+      <div><b>Chart:</b> trend ${esc(p.trend)}, RSI ${p.rsi}, MACD hist ${p.macd_hist ?? "–"}, volume ${esc(p.volume)}, support ${px(p.support)} / resistance ${px(p.resistance)}</div>
+      ${p.kst != null ? `<div><b>KST:</b> ${p.kst>=0?"+":""}${p.kst} vs signal ${p.kst_signal>=0?"+":""}${p.kst_signal} — ${esc(p.kst_state)} <span class="${p.kst_confirms?"up":"dn"}">${p.kst_confirms?"✔ confirms this pick":"✘ against this direction"}</span></div>` : ""}
       ${posTxt ? `<div><b>Positioning:</b> ${esc(posTxt)}</div>` : ""}
       ${agentLines}
       <div style="margin-top:4px"><b style="color:${agentColor.AEGIS}">AEGIS risk checks</b>${checks}</div>

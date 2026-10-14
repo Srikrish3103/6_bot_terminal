@@ -24,7 +24,7 @@ Set `universe: list` on any segment to scan only its `symbols:` instead. Spot se
 | # | Agent | Role | What it does |
 |---|-------|------|--------------|
 | 1 | **KESTREL** | Market scanner | Scores every underlying 0-100 (vol-normalised momentum, EMA50/200 trend, 20-bar range position, volume surge) and passes the top N **per segment** with a LONG/SHORT bias. |
-| 2 | **PRISM** | Chart technician | EMA stack, RSI, MACD, up/down volume, support/resistance → `SETUP / WATCH / NO SETUP` + entry, ATR stop, 2.5R target on the underlying. |
+| 2 | **PRISM** | Chart technician | EMA stack, RSI, MACD, **KST (Know Sure Thing)**, up/down volume, support/resistance → `SETUP / WATCH / NO SETUP` + entry, ATR stop, 2.5R target on the underlying. |
 | 3 | **HERALD** | News desk | Yahoo + Google News headlines → catalyst lexicon + VADER, recency-weighted; high-impact catalysts need ≥2 sources. |
 | 4 | **PULSE** | Crowd + positioning | StockTwits / Reddit mood, mention velocity, hype filter — blended with **derivatives positioning**: option PCR, max pain, net put writing (F&O, C-OPT) and funding rate (C-FUT, contrarian). |
 | 5 | **AEGIS** | Risk officer | Sizes in whole lots / contracts so loss at stop ≤ 1% equity. Checks position size, max loss, correlation, segment + gross exposure, R:R (credit spreads: POP + EV). **Any FAIL = veto.** |

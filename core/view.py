@@ -140,6 +140,7 @@ def html_report(run: dict, path: Path):
         p, h, pu, ag, ar = r["prism"]["details"], r["herald"]["details"], r["pulse"]["details"], r["aegis"]["details"], r["arbiter"]
         st = res.get("structure")
         prism_b = _rows([("Trend", p["trend"]), ("Volume", p["volume"]), ("RSI", p["rsi"]),
+                         ("KST / signal", f"{p.get('kst')} / {p.get('kst_signal')} · {p.get('kst_state')}"),
                          ("Support / Resist.", f"{fp(p['support'])} / {fp(p['resistance'])}"),
                          ("Entry · Stop · Target", f"{fp(p['entry'])} · {fp(p['stop'])} · {fp(p['target'])}")])
         cat = h.get("catalyst")
