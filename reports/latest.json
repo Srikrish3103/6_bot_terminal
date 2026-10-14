@@ -1,0 +1,1260 @@
+{
+ "ts": "2026-10-14T11:58:59",
+ "demo": false,
+ "secs": 9.4,
+ "scanned": 23,
+ "scan": [
+  {
+   "symbol": "EURUSD=X",
+   "class": "forex",
+   "price": 1.1209505796432495,
+   "chg_1d": 0.004416533110699783,
+   "ret_20d": -0.02843852366534494,
+   "momentum_z": -2.17,
+   "trend": -1,
+   "vol_ratio": 1.0,
+   "atr_pct": 0.00567073358759658,
+   "direction": "SHORT",
+   "raw": -0.6702406674634733,
+   "score": 67
+  },
+  {
+   "symbol": "USDCAD=X",
+   "class": "forex",
+   "price": 1.4198999404907227,
+   "chg_1d": -0.0056932091534782625,
+   "ret_20d": 0.019750009802832036,
+   "momentum_z": 1.66,
+   "trend": 1,
+   "vol_ratio": 1.0,
+   "atr_pct": 0.004726826134587813,
+   "direction": "LONG",
+   "raw": 0.5813532102121257,
+   "score": 58
+  },
+  {
+   "symbol": "META",
+   "class": "stocks_us",
+   "price": 762.5,
+   "chg_1d": 0.026300174234762386,
+   "ret_20d": 0.1385499801185741,
+   "momentum_z": 1.07,
+   "trend": 1,
+   "vol_ratio": 0.94,
+   "atr_pct": 0.03132195809507658,
+   "direction": "LONG",
+   "raw": 0.539676729151606,
+   "score": 54
+  },
+  {
+   "symbol": "MSFT",
+   "class": "stocks_us",
+   "price": 543.4500122070312,
+   "chg_1d": 0.004250185141281504,
+   "ret_20d": 0.0931968489397057,
+   "momentum_z": 0.84,
+   "trend": 1,
+   "vol_ratio": 0.84,
+   "atr_pct": 0.021031735557268644,
+   "direction": "LONG",
+   "raw": 0.49026220356038674,
+   "score": 49
+  },
+  {
+   "symbol": "GBPUSD=X",
+   "class": "forex",
+   "price": 1.3268758058547974,
+   "chg_1d": 0.004463513813510733,
+   "ret_20d": -0.015192762924187031,
+   "momentum_z": -1.12,
+   "trend": -1,
+   "vol_ratio": 1.0,
+   "atr_pct": 0.005130225365531466,
+   "direction": "SHORT",
+   "raw": -0.4869763416130346,
+   "score": 49
+  },
+  {
+   "symbol": "USDJPY=X",
+   "class": "forex",
+   "price": 158.3000030517578,
+   "chg_1d": -0.001387845160065626,
+   "ret_20d": 0.019540636427863634,
+   "momentum_z": 0.76,
+   "trend": 1,
+   "vol_ratio": 1.0,
+   "atr_pct": 0.006697371016338195,
+   "direction": "LONG",
+   "raw": 0.4877817502636872,
+   "score": 49
+  },
+  {
+   "symbol": "AMD",
+   "class": "stocks_us",
+   "price": 605.530029296875,
+   "chg_1d": 0.018999123667269746,
+   "ret_20d": 0.20097186560209024,
+   "momentum_z": 1.12,
+   "trend": 1,
+   "vol_ratio": 0.84,
+   "atr_pct": 0.04056731859537843,
+   "direction": "LONG",
+   "raw": 0.4676654173083159,
+   "score": 47
+  },
+  {
+   "symbol": "RELIANCE.NS",
+   "class": "stocks_in",
+   "price": 1179.9000244140625,
+   "chg_1d": 0.01131402570894835,
+   "ret_20d": -0.044847423479516646,
+   "momentum_z": -0.8,
+   "trend": -1,
+   "vol_ratio": 0.88,
+   "atr_pct": 0.01876165620062489,
+   "direction": "SHORT",
+   "raw": -0.4478116935775121,
+   "score": 45
+  },
+  {
+   "symbol": "AMZN",
+   "class": "stocks_us",
+   "price": 258.5799865722656,
+   "chg_1d": -0.0036605101972783105,
+   "ret_20d": 0.040898432003089846,
+   "momentum_z": 0.34,
+   "trend": 1,
+   "vol_ratio": 0.93,
+   "atr_pct": 0.022037374103843932,
+   "direction": "LONG",
+   "raw": 0.3742464362942222,
+   "score": 37
+  },
+  {
+   "symbol": "AAPL",
+   "class": "stocks_us",
+   "price": 341.2699890136719,
+   "chg_1d": 0.0008798069973745548,
+   "ret_20d": 0.029969194137537736,
+   "momentum_z": 0.41,
+   "trend": 1,
+   "vol_ratio": 0.85,
+   "atr_pct": 0.019759108818432698,
+   "direction": "LONG",
+   "raw": 0.35894144255322247,
+   "score": 36
+  },
+  {
+   "symbol": "NVDA",
+   "class": "stocks_us",
+   "price": 228.52000427246094,
+   "chg_1d": 0.009720735582561923,
+   "ret_20d": 0.0770608768658072,
+   "momentum_z": 0.75,
+   "trend": 1,
+   "vol_ratio": 0.75,
+   "atr_pct": 0.02445496795015502,
+   "direction": "LONG",
+   "raw": 0.3505219329854843,
+   "score": 35
+  },
+  {
+   "symbol": "TCS.NS",
+   "class": "stocks_in",
+   "price": 2304.39990234375,
+   "chg_1d": 0.02086557059176819,
+   "ret_20d": 0.02916487349014729,
+   "momentum_z": 0.32,
+   "trend": 0,
+   "vol_ratio": 2.23,
+   "atr_pct": 0.030264472689787436,
+   "direction": "LONG",
+   "raw": 0.3511480837947428,
+   "score": 35
+  },
+  {
+   "symbol": "GOOGL",
+   "class": "stocks_us",
+   "price": 353.7799987792969,
+   "chg_1d": 0.003005209670348341,
+   "ret_20d": 0.025508688946379365,
+   "momentum_z": 0.28,
+   "trend": 1,
+   "vol_ratio": 0.83,
+   "atr_pct": 0.02297612019525278,
+   "direction": "LONG",
+   "raw": 0.31420588757827517,
+   "score": 31
+  },
+  {
+   "symbol": "BTC-USD",
+   "class": "crypto",
+   "price": 83398.25,
+   "chg_1d": 0.02000533557152151,
+   "ret_20d": -0.011670096125136253,
+   "momentum_z": -0.11,
+   "trend": 1,
+   "vol_ratio": 0.69,
+   "atr_pct": 0.02492310237773347,
+   "direction": "LONG",
+   "raw": 0.2716451823817652,
+   "score": 27
+  },
+  {
+   "symbol": "INFY.NS",
+   "class": "stocks_in",
+   "price": 1086.6500244140625,
+   "chg_1d": 0.023114630818611204,
+   "ret_20d": 0.008960096948990248,
+   "momentum_z": 0.1,
+   "trend": 0,
+   "vol_ratio": 1.47,
+   "atr_pct": 0.02634012352391322,
+   "direction": "LONG",
+   "raw": 0.24941499708685289,
+   "score": 25
+  }
+ ],
+ "results": [
+  {
+   "symbol": "EURUSD=X",
+   "direction": "SHORT",
+   "reports": {
+    "kestrel": {
+     "agent": "KESTREL",
+     "role": "Market scanner",
+     "symbol": "EURUSD=X",
+     "score": -0.67,
+     "verdict": "#1 \u00b7 67",
+     "confidence": "MODERATE",
+     "details": {
+      "symbol": "EURUSD=X",
+      "class": "forex",
+      "price": 1.1209505796432495,
+      "chg_1d": 0.004416533110699783,
+      "ret_20d": -0.02843852366534494,
+      "momentum_z": -2.17,
+      "trend": -1,
+      "vol_ratio": 1.0,
+      "atr_pct": 0.00567073358759658,
+      "direction": "SHORT",
+      "raw": -0.6702406674634733,
+      "score": 67
+     },
+     "notes": []
+    },
+    "prism": {
+     "agent": "PRISM",
+     "role": "Chart technician",
+     "symbol": "EURUSD=X",
+     "score": -0.55,
+     "verdict": "SETUP",
+     "confidence": "MODERATE",
+     "details": {
+      "direction": "SHORT",
+      "price": 1.1209505796432495,
+      "trend": "DOWN",
+      "volume": "N/A (FX)",
+      "rsi": 30.4,
+      "ema20": 1.131351900241924,
+      "ema50": 1.1421048018504802,
+      "ema200": 1.1524666039765823,
+      "support": 1.1154862642288208,
+      "resistance": 1.1497821807861328,
+      "atr": 0.00635661210201883,
+      "entry": 1.1209505796432495,
+      "stop": 1.140020415949306,
+      "target": 1.0732759888781085,
+      "rr": 2.5,
+      "breakout": true
+     },
+     "notes": [
+      "Price at 20-bar extreme \u2014 breakout attempt"
+     ]
+    },
+    "herald": {
+     "agent": "HERALD",
+     "role": "News desk",
+     "symbol": "EURUSD=X",
+     "score": 0.001,
+     "verdict": "WATCH",
+     "confidence": "MODERATE",
+     "details": {
+      "headlines": 29,
+      "catalyst": null,
+      "top": [
+       {
+        "title": "US dollar strength masks growing disconnect with Treasury yields",
+        "source": "FOREX.com",
+        "age_h": 7.0,
+        "score": 0.35,
+        "catalyst": null,
+        "high_impact": false
+       },
+       {
+        "title": "EUR/USD Hits 17-Month Low Near. Why the Euro Keeps Losing to the Dollar",
+        "source": "Yahoo Finance",
+        "age_h": 41.1,
+        "score": -0.29,
+        "catalyst": null,
+        "high_impact": false
+       },
+       {
+        "title": "EUR/USD forecast: Downside risks persist despite recovery",
+        "source": "FOREX.com",
+        "age_h": 17.3,
+        "score": -0.24,
+        "catalyst": null,
+        "high_impact": false
+       },
+       {
+        "title": "EURUSD Extends Its Cautious Corrective Gains \u2013 Analysis \u201314-10-2026",
+        "source": "Economies.com",
+        "age_h": 5.0,
+        "score": 0.18,
+        "catalyst": null,
+        "high_impact": false
+       },
+       {
+        "title": "EUR/USD Price Forecast: RSI signals stretched selling pressure",
+        "source": "FXStreet",
+        "age_h": 12.3,
+        "score": -0.15,
+        "catalyst": null,
+        "high_impact": false
+       },
+       {
+        "title": "British Pound Technical Outlook: GBP/USD Bulls Fight to Stabilize at Critical Support",
+        "source": "FOREX.com",
+        "age_h": 16.2,
+        "score": -0.15,
+        "catalyst": null,
+        "high_impact": false
+       }
+      ],
+      "llm": false
+     },
+     "notes": []
+    },
+    "pulse": {
+     "agent": "PULSE",
+     "role": "Crowd sentiment",
+     "symbol": "EURUSD=X",
+     "score": -0.134,
+     "verdict": "NEUTRAL",
+     "confidence": "MODERATE",
+     "details": {
+      "posts": 30,
+      "tagged": 4,
+      "mood": -0.13,
+      "velocity": 0.58,
+      "extension_atr": -1.64,
+      "crowd": "NEUTRAL",
+      "contrarian": "OK",
+      "hype": false
+     },
+     "notes": []
+    },
+    "aegis": {
+     "agent": "AEGIS",
+     "role": "Risk officer",
+     "symbol": "EURUSD=X",
+     "score": 1.0,
+     "verdict": "APPROVED",
+     "confidence": "HIGH",
+     "details": {
+      "checks": {
+       "Position size": {
+        "pass": true,
+        "detail": "17,841.9998 units \u2248 $20,000 (cap $20,000)"
+       },
+       "Maximum loss": {
+        "pass": true,
+        "detail": "$340 at stop (limit $1,000)"
+       },
+       "Correlation": {
+        "pass": true,
+        "detail": "no correlated holdings"
+       },
+       "Portfolio exposure": {
+        "pass": true,
+        "detail": "gross 20% \u00b7 forex 20% \u00b7 0/8 open"
+       },
+       "Risk / reward": {
+        "pass": true,
+        "detail": "2.50R (min 2.0)"
+       }
+      },
+      "qty": 17841.99978411639,
+      "notional_usd": 20000.0,
+      "loss_at_stop_usd": 340.24401525579333,
+      "rr": 2.5,
+      "fails": [],
+      "already_holding": false
+     },
+     "notes": []
+    },
+    "arbiter": {
+     "agent": "ARBITER",
+     "role": "Final decision",
+     "symbol": "EURUSD=X",
+     "score": 0.347,
+     "verdict": "WAIT",
+     "confidence": "MODERATE",
+     "details": {
+      "direction": "SHORT",
+      "composite": 0.347,
+      "aligned": {
+       "kestrel": 0.67,
+       "prism": 0.55,
+       "herald": -0.0,
+       "pulse": 0.13
+      },
+      "reason": "No consensus. No trade."
+     },
+     "notes": []
+    }
+   }
+  },
+  {
+   "symbol": "USDCAD=X",
+   "direction": "LONG",
+   "reports": {
+    "kestrel": {
+     "agent": "KESTREL",
+     "role": "Market scanner",
+     "symbol": "USDCAD=X",
+     "score": 0.581,
+     "verdict": "#2 \u00b7 58",
+     "confidence": "MODERATE",
+     "details": {
+      "symbol": "USDCAD=X",
+      "class": "forex",
+      "price": 1.4198999404907227,
+      "chg_1d": -0.0056932091534782625,
+      "ret_20d": 0.019750009802832036,
+      "momentum_z": 1.66,
+      "trend": 1,
+      "vol_ratio": 1.0,
+      "atr_pct": 0.004726826134587813,
+      "direction": "LONG",
+      "raw": 0.5813532102121257,
+      "score": 58
+     },
+     "notes": []
+    },
+    "prism": {
+     "agent": "PRISM",
+     "role": "Chart technician",
+     "symbol": "USDCAD=X",
+     "score": 0.55,
+     "verdict": "SETUP",
+     "confidence": "MODERATE",
+     "details": {
+      "direction": "LONG",
+      "price": 1.4198999404907227,
+      "trend": "UP",
+      "volume": "N/A (FX)",
+      "rsi": 58.4,
+      "ema20": 1.4158651013291688,
+      "ema50": 1.4061217264715462,
+      "ema200": 1.3940992983213647,
+      "support": 1.3973000049591064,
+      "resistance": 1.4296599626541138,
+      "atr": 0.006711620147211228,
+      "entry": 1.4198999404907227,
+      "stop": 1.399765080049089,
+      "target": 1.4702370915948066,
+      "rr": 2.5,
+      "breakout": false
+     },
+     "notes": []
+    },
+    "herald": {
+     "agent": "HERALD",
+     "role": "News desk",
+     "symbol": "USDCAD=X",
+     "score": 0.016,
+     "verdict": "WATCH",
+     "confidence": "MODERATE",
+     "details": {
+      "headlines": 29,
+      "catalyst": null,
+      "top": [
+       {
+        "title": "USD/CAD: Canadian Dollar Hits 18-Month Low After 68,300 Job Losses",
+        "source": "EBC Financial Group",
+        "age_h": 51.4,
+        "score": -0.29,
+        "catalyst": null,
+        "high_impact": false
+       },
+       {
+        "title": "After a five-week strong uptrend, USD/CAD hits major resistance",
+        "source": "FXStreet",
+        "age_h": 20.0,
+        "score": 0.26,
+        "catalyst": null,
+        "high_impact": false
+       },
+       {
+        "title": "USD/CAD Price Forecast: Falls to near 1.4250 near nine-day EMA support",
+        "source": "FXStreet",
+        "age_h": 22.4,
+        "score": 0.2,
+        "catalyst": null,
+        "high_impact": false
+       },
+       {
+        "title": "Loonie Finds Modest Support as USD/CAD Holds Peak",
+        "source": "TradingPedia",
+        "age_h": 24.3,
+        "score": 0.2,
+        "catalyst": null,
+        "high_impact": false
+       },
+       {
+        "title": "Chart USD/CAD Update: Consolidating beneath fresh year highs",
+        "source": "Continuum Economics",
+        "age_h": 39.0,
+        "score": 0.16,
+        "catalyst": null,
+        "high_impact": false
+       },
+       {
+        "title": "USD/CAD Price Forecast: US Dollar eases within range in a quiet session",
+        "source": "FXStreet",
+        "age_h": 47.9,
+        "score": 0.16,
+        "catalyst": null,
+        "high_impact": false
+       }
+      ],
+      "llm": false
+     },
+     "notes": []
+    },
+    "pulse": {
+     "agent": "PULSE",
+     "role": "Crowd sentiment",
+     "symbol": "USDCAD=X",
+     "score": 0.388,
+     "verdict": "BULLISH",
+     "confidence": "MODERATE",
+     "details": {
+      "posts": 30,
+      "tagged": 2,
+      "mood": 0.39,
+      "velocity": 2.1,
+      "extension_atr": 0.6,
+      "crowd": "BULLISH",
+      "contrarian": "OK",
+      "hype": false
+     },
+     "notes": []
+    },
+    "aegis": {
+     "agent": "AEGIS",
+     "role": "Risk officer",
+     "symbol": "USDCAD=X",
+     "score": 1.0,
+     "verdict": "APPROVED",
+     "confidence": "HIGH",
+     "details": {
+      "checks": {
+       "Position size": {
+        "pass": true,
+        "detail": "20,000.0000 units \u2248 $20,000 (cap $20,000)"
+       },
+       "Maximum loss": {
+        "pass": true,
+        "detail": "$284 at stop (limit $1,000)"
+       },
+       "Correlation": {
+        "pass": true,
+        "detail": "no correlated holdings"
+       },
+       "Portfolio exposure": {
+        "pass": true,
+        "detail": "gross 20% \u00b7 forex 20% \u00b7 0/8 open"
+       },
+       "Risk / reward": {
+        "pass": true,
+        "detail": "2.50R (min 2.0)"
+       }
+      },
+      "qty": 20000.0,
+      "notional_usd": 20000.0,
+      "loss_at_stop_usd": 283.60956807526753,
+      "rr": 2.5,
+      "fails": [],
+      "already_holding": false
+     },
+     "notes": []
+    },
+    "arbiter": {
+     "agent": "ARBITER",
+     "role": "Final decision",
+     "symbol": "USDCAD=X",
+     "score": 0.389,
+     "verdict": "TRADE",
+     "confidence": "MODERATE",
+     "details": {
+      "direction": "LONG",
+      "composite": 0.389,
+      "aligned": {
+       "kestrel": 0.58,
+       "prism": 0.55,
+       "herald": 0.02,
+       "pulse": 0.39
+      },
+      "reason": "Consensus reached"
+     },
+     "notes": []
+    }
+   }
+  },
+  {
+   "symbol": "META",
+   "direction": "LONG",
+   "reports": {
+    "kestrel": {
+     "agent": "KESTREL",
+     "role": "Market scanner",
+     "symbol": "META",
+     "score": 0.54,
+     "verdict": "#3 \u00b7 54",
+     "confidence": "MODERATE",
+     "details": {
+      "symbol": "META",
+      "class": "stocks_us",
+      "price": 762.5,
+      "chg_1d": 0.026300174234762386,
+      "ret_20d": 0.1385499801185741,
+      "momentum_z": 1.07,
+      "trend": 1,
+      "vol_ratio": 0.94,
+      "atr_pct": 0.03132195809507658,
+      "direction": "LONG",
+      "raw": 0.539676729151606,
+      "score": 54
+     },
+     "notes": []
+    },
+    "prism": {
+     "agent": "PRISM",
+     "role": "Chart technician",
+     "symbol": "META",
+     "score": 0.479,
+     "verdict": "WATCH",
+     "confidence": "MODERATE",
+     "details": {
+      "direction": "LONG",
+      "price": 762.5,
+      "trend": "UP",
+      "volume": "CONFIRMING",
+      "rsi": 66.0,
+      "ema20": 716.8285618099537,
+      "ema50": 672.5859012265498,
+      "ema200": 639.5026816849479,
+      "support": 660.278927643704,
+      "resistance": 779.8200073242188,
+      "atr": 23.882993047495894,
+      "entry": 762.5,
+      "stop": 690.8510208575124,
+      "target": 941.6224478562191,
+      "rr": 2.5,
+      "breakout": false
+     },
+     "notes": []
+    },
+    "herald": {
+     "agent": "HERALD",
+     "role": "News desk",
+     "symbol": "META",
+     "score": 0.114,
+     "verdict": "WATCH",
+     "confidence": "MODERATE",
+     "details": {
+      "headlines": 26,
+      "catalyst": null,
+      "top": [
+       {
+        "title": "What Makes Meta Platforms (META) an Attractive Opportunity?",
+        "source": "Yahoo Finance",
+        "age_h": 18.4,
+        "score": 0.35,
+        "catalyst": null,
+        "high_impact": false
+       },
+       {
+        "title": "Zuckerberg says Meta\u2019s AI bet only fails if all AI fails",
+        "source": "TheStreet",
+        "age_h": 5.4,
+        "score": -0.34,
+        "catalyst": null,
+        "high_impact": false
+       },
+       {
+        "title": "Meta Platforms, Inc. $META Stock: Sax Wealth Advisors LLC Boosts Holdings",
+        "source": "MarketBeat",
+        "age_h": 13.2,
+        "score": 0.34,
+        "catalyst": null,
+        "high_impact": false
+       },
+       {
+        "title": "Lincoln Capital Corp Acquires 2,996 Shares of Meta Platforms, Inc. $META",
+        "source": "MarketBeat",
+        "age_h": 7.1,
+        "score": 0.33,
+        "catalyst": "Deal/partnership",
+        "high_impact": false
+       },
+       {
+        "title": "Why the Market Dipped But Meta Platforms (META) Gained Today",
+        "source": "Yahoo! Finance Canada",
+        "age_h": 9.7,
+        "score": 0.26,
+        "catalyst": null,
+        "high_impact": false
+       },
+       {
+        "title": "Truist lifts Meta target to Street-high $1,000 on strong Muse adoption",
+        "source": "Yahoo Finance",
+        "age_h": 17.0,
+        "score": 0.26,
+        "catalyst": null,
+        "high_impact": false
+       }
+      ],
+      "llm": false
+     },
+     "notes": []
+    },
+    "pulse": {
+     "agent": "PULSE",
+     "role": "Crowd sentiment",
+     "symbol": "META",
+     "score": 0.156,
+     "verdict": "BULLISH",
+     "confidence": "MODERATE",
+     "details": {
+      "posts": 30,
+      "tagged": 10,
+      "mood": 0.16,
+      "velocity": 1.0,
+      "extension_atr": 1.91,
+      "crowd": "BULLISH",
+      "contrarian": "OK",
+      "hype": false
+     },
+     "notes": []
+    },
+    "aegis": {
+     "agent": "AEGIS",
+     "role": "Risk officer",
+     "symbol": "META",
+     "score": 1.0,
+     "verdict": "APPROVED",
+     "confidence": "HIGH",
+     "details": {
+      "checks": {
+       "Position size": {
+        "pass": true,
+        "detail": "13.9569 units \u2248 $10,642 (cap $20,000)"
+       },
+       "Maximum loss": {
+        "pass": true,
+        "detail": "$1,000 at stop (limit $1,000)"
+       },
+       "Correlation": {
+        "pass": true,
+        "detail": "0.04 vs USDCAD=X"
+       },
+       "Portfolio exposure": {
+        "pass": true,
+        "detail": "gross 31% \u00b7 stocks_us 11% \u00b7 1/8 open"
+       },
+       "Risk / reward": {
+        "pass": true,
+        "detail": "2.50R (min 2.0)"
+       }
+      },
+      "qty": 13.956932980319365,
+      "notional_usd": 10642.161397493515,
+      "loss_at_stop_usd": 1000.0,
+      "rr": 2.5,
+      "fails": [],
+      "already_holding": false
+     },
+     "notes": []
+    },
+    "arbiter": {
+     "agent": "ARBITER",
+     "role": "Final decision",
+     "symbol": "META",
+     "score": 0.332,
+     "verdict": "WAIT",
+     "confidence": "MODERATE",
+     "details": {
+      "direction": "LONG",
+      "composite": 0.332,
+      "aligned": {
+       "kestrel": 0.54,
+       "prism": 0.48,
+       "herald": 0.11,
+       "pulse": 0.16
+      },
+      "reason": "PRISM: WATCH \u2014 no confirmed setup"
+     },
+     "notes": []
+    }
+   }
+  },
+  {
+   "symbol": "MSFT",
+   "direction": "LONG",
+   "reports": {
+    "kestrel": {
+     "agent": "KESTREL",
+     "role": "Market scanner",
+     "symbol": "MSFT",
+     "score": 0.49,
+     "verdict": "#4 \u00b7 49",
+     "confidence": "MODERATE",
+     "details": {
+      "symbol": "MSFT",
+      "class": "stocks_us",
+      "price": 543.4500122070312,
+      "chg_1d": 0.004250185141281504,
+      "ret_20d": 0.0931968489397057,
+      "momentum_z": 0.84,
+      "trend": 1,
+      "vol_ratio": 0.84,
+      "atr_pct": 0.021031735557268644,
+      "direction": "LONG",
+      "raw": 0.49026220356038674,
+      "score": 49
+     },
+     "notes": []
+    },
+    "prism": {
+     "agent": "PRISM",
+     "role": "Chart technician",
+     "symbol": "MSFT",
+     "score": 0.66,
+     "verdict": "SETUP",
+     "confidence": "HIGH",
+     "details": {
+      "direction": "LONG",
+      "price": 543.4500122070312,
+      "trend": "UP",
+      "volume": "FLAT",
+      "rsi": 70.8,
+      "ema20": 518.5680455601189,
+      "ema50": 495.23910576067976,
+      "ema200": 453.9182537130164,
+      "support": 487.2300109863281,
+      "resistance": 551.1500244140625,
+      "atr": 11.429696945332697,
+      "entry": 543.4500122070312,
+      "stop": 509.16092137103317,
+      "target": 629.1727392970265,
+      "rr": 2.5,
+      "breakout": false
+     },
+     "notes": []
+    },
+    "herald": {
+     "agent": "HERALD",
+     "role": "News desk",
+     "symbol": "MSFT",
+     "score": -0.027,
+     "verdict": "WATCH",
+     "confidence": "MODERATE",
+     "details": {
+      "headlines": 30,
+      "catalyst": {
+       "headline": "Microsoft Patches Record 1,413 Flaws, Including Exploited Windows Shell Bug",
+       "type": "Security/outage",
+       "source_check": "SINGLE SOURCE",
+       "market_impact": "HIGH",
+       "time_sensitivity": "24H"
+      },
+      "top": [
+       {
+        "title": "Microsoft Patches Record 1,413 Flaws, Including Exploited Windows Shell Bug",
+        "source": "The Hacker News",
+        "age_h": 1.9,
+        "score": -0.56,
+        "catalyst": "Security/outage",
+        "high_impact": true
+       },
+       {
+        "title": "Microsoft Stock Reaches a Record High. How It Suddenly Became an AI Winner.",
+        "source": "Barron's",
+        "age_h": 9.6,
+        "score": 0.31,
+        "catalyst": null,
+        "high_impact": false
+       },
+       {
+        "title": "Adobe software dupe maker takes on Microsoft Office, releasing free versions of Word, Powerpoint, and Excel",
+        "source": "Mashable",
+        "age_h": 9.5,
+        "score": 0.29,
+        "catalyst": null,
+        "high_impact": false
+       },
+       {
+        "title": "Copilot to autopilot: Why no single safeguard is enough",
+        "source": "Microsoft",
+        "age_h": 14.4,
+        "score": -0.26,
+        "catalyst": null,
+        "high_impact": false
+       },
+       {
+        "title": "Man Dragged From Iowa Meeting For Protesting Microsoft Data Center",
+        "source": "Newsweek",
+        "age_h": 15.5,
+        "score": -0.23,
+        "catalyst": null,
+        "high_impact": false
+       },
+       {
+        "title": "Microsoft Flight Simulator Releases National Championship Air Races and New Aircraft Pack Today",
+        "source": "XBOX Wire",
+        "age_h": 8.0,
+        "score": 0.22,
+        "catalyst": null,
+        "high_impact": false
+       }
+      ],
+      "llm": false
+     },
+     "notes": []
+    },
+    "pulse": {
+     "agent": "PULSE",
+     "role": "Crowd sentiment",
+     "symbol": "MSFT",
+     "score": 0.0,
+     "verdict": "QUIET",
+     "confidence": "LOW",
+     "details": {
+      "posts": 0
+     },
+     "notes": [
+      "Too little crowd data \u2014 ignored"
+     ]
+    },
+    "aegis": {
+     "agent": "AEGIS",
+     "role": "Risk officer",
+     "symbol": "MSFT",
+     "score": 1.0,
+     "verdict": "APPROVED",
+     "confidence": "HIGH",
+     "details": {
+      "checks": {
+       "Position size": {
+        "pass": true,
+        "detail": "29.1638 units \u2248 $15,849 (cap $20,000)"
+       },
+       "Maximum loss": {
+        "pass": true,
+        "detail": "$1,000 at stop (limit $1,000)"
+       },
+       "Correlation": {
+        "pass": true,
+        "detail": "no correlated holdings"
+       },
+       "Portfolio exposure": {
+        "pass": true,
+        "detail": "gross 36% \u00b7 stocks_us 16% \u00b7 1/8 open"
+       },
+       "Risk / reward": {
+        "pass": true,
+        "detail": "2.50R (min 2.0)"
+       }
+      },
+      "qty": 29.16379453695399,
+      "notional_usd": 15849.064497110998,
+      "loss_at_stop_usd": 1000.0,
+      "rr": 2.5000000000000018,
+      "fails": [],
+      "already_holding": false
+     },
+     "notes": []
+    },
+    "arbiter": {
+     "agent": "ARBITER",
+     "role": "Final decision",
+     "symbol": "MSFT",
+     "score": 0.367,
+     "verdict": "TRADE",
+     "confidence": "MODERATE",
+     "details": {
+      "direction": "LONG",
+      "composite": 0.367,
+      "aligned": {
+       "kestrel": 0.49,
+       "prism": 0.66,
+       "herald": -0.03,
+       "pulse": 0.0
+      },
+      "reason": "Consensus reached"
+     },
+     "notes": []
+    }
+   }
+  },
+  {
+   "symbol": "GBPUSD=X",
+   "direction": "SHORT",
+   "reports": {
+    "kestrel": {
+     "agent": "KESTREL",
+     "role": "Market scanner",
+     "symbol": "GBPUSD=X",
+     "score": -0.487,
+     "verdict": "#5 \u00b7 49",
+     "confidence": "MODERATE",
+     "details": {
+      "symbol": "GBPUSD=X",
+      "class": "forex",
+      "price": 1.3268758058547974,
+      "chg_1d": 0.004463513813510733,
+      "ret_20d": -0.015192762924187031,
+      "momentum_z": -1.12,
+      "trend": -1,
+      "vol_ratio": 1.0,
+      "atr_pct": 0.005130225365531466,
+      "direction": "SHORT",
+      "raw": -0.4869763416130346,
+      "score": 49
+     },
+     "notes": []
+    },
+    "prism": {
+     "agent": "PRISM",
+     "role": "Chart technician",
+     "symbol": "GBPUSD=X",
+     "score": -0.55,
+     "verdict": "SETUP",
+     "confidence": "MODERATE",
+     "details": {
+      "direction": "SHORT",
+      "price": 1.3268758058547974,
+      "trend": "DOWN",
+      "volume": "N/A (FX)",
+      "rsi": 45.1,
+      "ema20": 1.3286657945278493,
+      "ema50": 1.336441421023876,
+      "ema200": 1.3398789503948316,
+      "support": 1.3182177543640137,
+      "resistance": 1.3406623601913452,
+      "atr": 0.006807171916106286,
+      "entry": 1.3268758058547974,
+      "stop": 1.3423641531703718,
+      "target": 1.2881549375658612,
+      "rr": 2.5,
+      "breakout": false
+     },
+     "notes": []
+    },
+    "herald": {
+     "agent": "HERALD",
+     "role": "News desk",
+     "symbol": "GBPUSD=X",
+     "score": -0.004,
+     "verdict": "WATCH",
+     "confidence": "MODERATE",
+     "details": {
+      "headlines": 29,
+      "catalyst": null,
+      "top": [
+       {
+        "title": "Swiss Franc Short-term Outlook: USD/CHF Rebound Tests Broken Uptrend",
+        "source": "StoneX",
+        "age_h": 6.5,
+        "score": -0.24,
+        "catalyst": null,
+        "high_impact": false
+       },
+       {
+        "title": "EUR/USD forecast: Downside risks persist despite recovery",
+        "source": "StoneX",
+        "age_h": 17.3,
+        "score": -0.24,
+        "catalyst": null,
+        "high_impact": false
+       },
+       {
+        "title": "Pound gains and stays inside its range for a third week",
+        "source": "FXStreet",
+        "age_h": 8.3,
+        "score": 0.17,
+        "catalyst": null,
+        "high_impact": false
+       },
+       {
+        "title": "Pound Sterling Price News and Forecast: GBP/USD finds fresh momentum as BoE hawks set stage for US CPI",
+        "source": "FXStreet",
+        "age_h": 14.6,
+        "score": 0.16,
+        "catalyst": null,
+        "high_impact": false
+       },
+       {
+        "title": "GBP/USD Rate Support Faces a Growing UK Gilt Market Risk",
+        "source": "Investing.com Nigeria",
+        "age_h": 8.5,
+        "score": 0.16,
+        "catalyst": null,
+        "high_impact": false
+       },
+       {
+        "title": "British Pound Technical Outlook: GBP/USD Bulls Fight to Stabilize at Critical Support",
+        "source": "StoneX",
+        "age_h": 15.0,
+        "score": -0.15,
+        "catalyst": null,
+        "high_impact": false
+       }
+      ],
+      "llm": false
+     },
+     "notes": []
+    },
+    "pulse": {
+     "agent": "PULSE",
+     "role": "Crowd sentiment",
+     "symbol": "GBPUSD=X",
+     "score": 0.28,
+     "verdict": "BULLISH",
+     "confidence": "MODERATE",
+     "details": {
+      "posts": 30,
+      "tagged": 5,
+      "mood": 0.28,
+      "velocity": 1.63,
+      "extension_atr": -0.26,
+      "crowd": "BULLISH",
+      "contrarian": "OK",
+      "hype": false
+     },
+     "notes": []
+    },
+    "aegis": {
+     "agent": "AEGIS",
+     "role": "Risk officer",
+     "symbol": "GBPUSD=X",
+     "score": 1.0,
+     "verdict": "APPROVED",
+     "confidence": "HIGH",
+     "details": {
+      "checks": {
+       "Position size": {
+        "pass": true,
+        "detail": "15,073.0007 units \u2248 $20,000 (cap $20,000)"
+       },
+       "Maximum loss": {
+        "pass": true,
+        "detail": "$233 at stop (limit $1,000)"
+       },
+       "Correlation": {
+        "pass": true,
+        "detail": "0.59 vs USDCAD=X"
+       },
+       "Portfolio exposure": {
+        "pass": true,
+        "detail": "gross 56% \u00b7 forex 40% \u00b7 2/8 open"
+       },
+       "Risk / reward": {
+        "pass": true,
+        "detail": "2.50R (min 2.0)"
+       }
+      },
+      "qty": 15073.000737333996,
+      "notional_usd": 20000.0,
+      "loss_at_stop_usd": 233.45587050773898,
+      "rr": 2.5,
+      "fails": [],
+      "already_holding": false
+     },
+     "notes": []
+    },
+    "arbiter": {
+     "agent": "ARBITER",
+     "role": "Final decision",
+     "symbol": "GBPUSD=X",
+     "score": 0.238,
+     "verdict": "WAIT",
+     "confidence": "LOW",
+     "details": {
+      "direction": "SHORT",
+      "composite": 0.238,
+      "aligned": {
+       "kestrel": 0.49,
+       "prism": 0.55,
+       "herald": 0.0,
+       "pulse": -0.28
+      },
+      "reason": "No consensus. No trade."
+     },
+     "notes": []
+    }
+   }
+  }
+ ],
+ "book": {
+  "start": 100000.0,
+  "realized": 0.0,
+  "unrealized": 0.0,
+  "equity": 100000.0,
+  "positions": [
+   {
+    "id": 1,
+    "symbol": "USDCAD=X",
+    "side": "LONG",
+    "qty": 20000.0,
+    "entry": 1.4198999404907227,
+    "stop": 1.399765080049089,
+    "target": 1.4702370915948066,
+    "asset_class": "forex",
+    "opened_at": "2026-10-14T11:59:06",
+    "status": "OPEN",
+    "exit": null,
+    "closed_at": null,
+    "pnl_usd": null,
+    "exit_reason": null,
+    "last": 1.4198999404907227,
+    "upnl_usd": 0.0,
+    "notional_usd": 20000.0
+   },
+   {
+    "id": 2,
+    "symbol": "MSFT",
+    "side": "LONG",
+    "qty": 29.16379453695399,
+    "entry": 543.4500122070312,
+    "stop": 509.16092137103317,
+    "target": 629.1727392970265,
+    "asset_class": "stocks_us",
+    "opened_at": "2026-10-14T11:59:07",
+    "status": "OPEN",
+    "exit": null,
+    "closed_at": null,
+    "pnl_usd": null,
+    "exit_reason": null,
+    "last": 543.4500122070312,
+    "upnl_usd": 0.0,
+    "notional_usd": 15849.064497110998
+   }
+  ]
+ },
+ "closed": []
+}

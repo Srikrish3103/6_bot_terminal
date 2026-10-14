@@ -1,0 +1,86 @@
+# SENTINEL-6 — local multi-agent market desk (PAPER TRADING ONLY)
+
+account:
+  starting_equity: 100000      # in base currency (USD)
+  base_currency: USD
+
+universe:                      # yfinance symbols
+  stocks_us:  [AAPL, NVDA, MSFT, AMZN, TSLA, META, GOOGL, AMD]
+  stocks_in:  [RELIANCE.NS, HDFCBANK.NS, INFY.NS, TCS.NS, ICICIBANK.NS]
+  crypto:     [BTC-USD, ETH-USD, SOL-USD, BNB-USD, ADA-USD]
+  forex:      [EURUSD=X, GBPUSD=X, USDJPY=X, AUDUSD=X, USDCAD=X]
+
+# Friendly names used for news / social search
+aliases:
+  AAPL: Apple
+  NVDA: Nvidia
+  MSFT: Microsoft
+  AMZN: Amazon
+  TSLA: Tesla
+  META: Meta Platforms
+  GOOGL: Alphabet Google
+  AMD: AMD
+  RELIANCE.NS: Reliance Industries
+  HDFCBANK.NS: HDFC Bank
+  INFY.NS: Infosys
+  TCS.NS: Tata Consultancy Services
+  ICICIBANK.NS: ICICI Bank
+  BTC-USD: Bitcoin
+  ETH-USD: Ethereum
+  SOL-USD: Solana
+  BNB-USD: BNB crypto
+  ADA-USD: Cardano
+  EURUSD=X: EUR/USD
+  GBPUSD=X: GBP/USD
+  USDJPY=X: USD/JPY
+  AUDUSD=X: AUD/USD
+  USDCAD=X: USD/CAD
+
+# 1) KESTREL — market scanner
+kestrel:
+  history: 2y
+  top_n: 5                     # candidates passed downstream
+  min_score: 25                # 0-100 opportunity score floor
+  allow_short: true
+
+# 2) PRISM — chart technician
+prism:
+  atr_stop_mult: 1.5
+  target_rr: 2.5               # target = entry + rr * risk
+  sr_lookback: 20
+
+# 3) HERALD — news desk
+herald:
+  max_age_hours: 72
+  google_news: true
+
+# 4) PULSE — crowd sentiment
+pulse:
+  reddit: true
+  stocktwits: true
+  hype_velocity: 3.0           # 24h mentions vs weekly daily avg
+  hype_extension_atr: 2.0      # price stretched > N ATR from EMA20
+
+# 5) AEGIS — risk officer (veto power)
+aegis:
+  risk_per_trade_pct: 1.0      # max loss per trade, % equity
+  max_position_pct: 20.0       # max notional per position, % equity
+  max_gross_pct: 150.0         # total gross exposure, % equity
+  max_class_pct: 60.0          # per asset class, % equity
+  max_positions: 8
+  max_correlation: 0.75
+  min_rr: 2.0
+
+# 6) ARBITER — final decision
+arbiter:
+  weights: {kestrel: 0.15, prism: 0.40, herald: 0.25, pulse: 0.20}
+  trade_threshold: 0.35        # composite score needed to TRADE
+  conflict_threshold: -0.30    # any desk below this vs direction => WAIT
+
+# Optional local LLM (Ollama) to re-score headlines. Off = rule-based only.
+llm:
+  enabled: false
+  url: http://localhost:11434/api/generate
+  model: llama3.1:8b
+
+http_timeout: 8
