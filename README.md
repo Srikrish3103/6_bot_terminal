@@ -108,8 +108,22 @@ core/web.py          local web server for the dashboard
 core/suggest.py      funnel counts + plain-English trade instructions
 web/dashboard.html   the dashboard page
 core/check.py        --check source tester
+pine/kst.pine        KST for TradingView (same maths as the bot)
+tests/test_kst.py    KST regression test
 data/paper_v2.db     your paper book (not committed)
 ```
+
+## KST (Know Sure Thing)
+PRISM scores KST alongside MACD (weight 0.15). Settings live in `config.yaml → prism.kst`:
+
+| Setting | Default | Meaning |
+|---|---|---|
+| `method` | `sma` | `sma` = TradingView default · `ema` = no drop-off jumps, slightly faster |
+| `roc` | `[10, 15, 20, 30]` | % change lookbacks |
+| `smooth` | `[10, 10, 10, 15]` | smoothing lengths |
+| `signal` | `9` | signal line length |
+
+`pine/kst.pine` is the same indicator for TradingView (with the SMA/EMA switch, crossover markers and alerts) — keep its inputs equal to the config so the chart and the bot agree. `python tests/test_kst.py` checks the maths (bar 90 of the sample: KST 97.58, signal 87.74, bullish cross on bar 64).
 
 ## Notes
 - NSE blocks heavy scraping: the option chain is only fetched for the top F&O picks each cycle. If NSE refuses, F&O falls back to futures for that pick.

@@ -19,7 +19,9 @@ class Prism(Agent):
         r = float(rsi(c).iloc[-1])
         _, _, hist = macd(c)
         h_now, h_prev = float(hist.iloc[-1]), float(hist.iloc[-3])
-        k_line, k_sig = kst(c)
+        kc = pc.get("kst", {})
+        k_line, k_sig = kst(c, tuple(kc.get("roc", (10, 15, 20, 30))), tuple(kc.get("smooth", (10, 10, 10, 15))),
+                            kc.get("signal", 9), kc.get("method", "sma"))
         k_now, s_now = float(k_line.iloc[-1]), float(k_sig.iloc[-1])
         k_prev, s_prev = float(k_line.iloc[-2]), float(k_sig.iloc[-2])
         a = float(atr(df).iloc[-1])
@@ -39,7 +41,7 @@ class Prism(Agent):
             k_s = clip((1 if gap > 0 else -1) * (1.0 if (k_now * d > 0) == (gap > 0) else 0.6))
             k_state = ("bullish" if k_now > s_now else "bearish") + (" crossover" if cross else "")
         else:
-            gap, cross, k_s, k_state = 0.0, False, 0.0, "n/a (<53 bars)"
+            gap, cross, k_s, k_state = 0.0, False, 0.0, "n/a (not enough bars)"
         if d == 1:
             rsi_s = 1 if 50 <= r <= 68 else 0.3 if 45 <= r < 50 else -0.5 if r > 75 else -1 if r < 40 else 0
         else:
@@ -74,7 +76,7 @@ class Prism(Agent):
         if kst_ok:
             side = "above" if k_now > s_now else "below"
             good = gap > 0
-            msg = (f"KST {k_now:+.1f} {side} signal {s_now:+.1f}"
+            msg = (f"KST[{kc.get('method', 'sma').upper()}] {k_now:+.1f} {side} signal {s_now:+.1f}"
                    + (" — fresh crossover" if cross else "")
                    + (f", {'above' if k_now > 0 else 'below'} zero")
                    + (" → momentum confirms, KST supports this pick" if good else " → KST against this direction"))

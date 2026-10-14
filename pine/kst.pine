@@ -1,0 +1,32 @@
+//@version=6
+// SENTINEL-6 · Know Sure Thing — same maths as core/indicators.kst() used by the PRISM agent.
+// Keep these inputs in sync with config.yaml → prism.kst so TradingView and the bot show identical values.
+indicator(title="Know sure thing (SENTINEL-6)", shorttitle="KST", format=format.price, precision=4, timeframe="", timeframe_gaps=true)
+method  = input.string("SMA", "Smoothing", options=["SMA", "EMA"], tooltip="SMA = TradingView default. EMA = no drop-off jumps, slightly faster.")
+roclen1 = input.int(10, minval=1, title = "ROC Length #1")
+roclen2 = input.int(15, minval=1, title = "ROC Length #2")
+roclen3 = input.int(20, minval=1, title = "ROC Length #3")
+roclen4 = input.int(30, minval=1, title = "ROC Length #4")
+smalen1 = input.int(10, minval=1, title = "Smoothing Length #1")
+smalen2 = input.int(10, minval=1, title = "Smoothing Length #2")
+smalen3 = input.int(10, minval=1, title = "Smoothing Length #3")
+smalen4 = input.int(15, minval=1, title = "Smoothing Length #4")
+siglen  = input.int(9, minval=1, title = "Signal Line Length")
+
+ma(src, len) => method == "EMA" ? ta.ema(src, len) : ta.sma(src, len)
+smaroc(roclen, smalen) => ma(ta.roc(close, roclen), smalen)
+
+kst = smaroc(roclen1, smalen1) + 2 * smaroc(roclen2, smalen2) + 3 * smaroc(roclen3, smalen3) + 4 * smaroc(roclen4, smalen4)
+sig = ma(kst, siglen)
+
+plot(kst, color=#009688, title="KST")
+plot(sig, color=#F44336, title="Signal")
+hline(0, title="Zero", color=#787B86)
+
+// Same events the bot logs
+bullCross = ta.crossover(kst, sig)
+bearCross = ta.crossunder(kst, sig)
+plotshape(bullCross, title="Bullish cross", style=shape.triangleup,   location=location.bottom, color=#009688, size=size.tiny)
+plotshape(bearCross, title="Bearish cross", style=shape.triangledown, location=location.top,    color=#F44336, size=size.tiny)
+alertcondition(bullCross, "KST bullish crossover", "KST crossed above its signal line")
+alertcondition(bearCross, "KST bearish crossover", "KST crossed below its signal line")

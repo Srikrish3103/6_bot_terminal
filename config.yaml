@@ -121,9 +121,14 @@ prism:
     trend: 0.28                # EMA 20/50/200 stack
     price_vs_ema20: 0.12
     macd: 0.15                 # MACD histogram
-    kst: 0.15                  # Know Sure Thing vs its signal line (10/15/20/30, 10/10/10/15, 9)
+    kst: 0.15                  # Know Sure Thing vs its signal line
     rsi: 0.15
     volume: 0.15
+  kst:                         # same settings as pine/kst.pine — keep them in sync with your TradingView chart
+    method: sma                # sma (TradingView default) | ema (no drop-off jumps, slightly faster)
+    roc: [10, 15, 20, 30]      # ROC lengths #1-#4
+    smooth: [10, 10, 10, 15]   # smoothing lengths #1-#4
+    signal: 9                  # signal line length
 
 # 3) HERALD — news desk
 herald:

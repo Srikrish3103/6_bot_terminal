@@ -34,8 +34,13 @@ def volume_ratio(df: pd.DataFrame, short=5, long=50) -> float:
     return float(v.tail(short).mean() / max(v.tail(long).mean(), 1e-9))
 
 
-def kst(s: pd.Series, roc=(10, 15, 20, 30), sma=(10, 10, 10, 15), sig=9):
-    """Know Sure Thing (Pring), identical to TradingView's default KST.
-    KST = Σ w_i · SMA(ROC(close, roc_i), sma_i), weights 1..4; signal = SMA(KST, sig)."""
-    line = sum((i + 1) * (100 * s.pct_change(r)).rolling(m).mean() for i, (r, m) in enumerate(zip(roc, sma)))
-    return line, line.rolling(sig).mean()
+def kst(s: pd.Series, roc=(10, 15, 20, 30), smooth=(10, 10, 10, 15), sig=9, method="sma"):
+    """Know Sure Thing (Martin Pring). Defaults = TradingView's built-in KST.
+    KST = 1·MA(ROC10,10) + 2·MA(ROC15,10) + 3·MA(ROC20,10) + 4·MA(ROC30,15);  signal = MA(KST, 9)
+    method: "sma" (TradingView default) or "ema" (no drop-off jumps, slightly faster)."""
+    if method == "ema":
+        ma = lambda x, n: x.ewm(span=n, adjust=False, min_periods=n).mean()  # noqa: E731  (= ta.ema)
+    else:
+        ma = lambda x, n: x.rolling(n).mean()                                # noqa: E731  (= ta.sma)
+    line = sum((i + 1) * ma(100 * s.pct_change(r), m) for i, (r, m) in enumerate(zip(roc, smooth)))
+    return line, ma(line, sig)
