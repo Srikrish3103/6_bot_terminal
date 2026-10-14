@@ -175,6 +175,7 @@ class Desk:
         with ThreadPoolExecutor(max_workers=6) as ex:
             news = dict(zip([u.key for u in pu], ex.map(self.feeds.news, pu)))
             crowd = dict(zip([u.key for u in pu], ex.map(self.feeds.crowd, pu)))
+            buzz = dict(zip([u.key for u in pu], ex.map(self.feeds.buzz, pu)))
             derivs = dict(zip([u.key for u in pu], ex.map(lambda u: self.feeds.deriv(u, data[u.key]), pu)))
 
         results = []
@@ -191,7 +192,7 @@ class Desk:
             reps["herald"] = self.herald.analyse(key, news.get(key, []))                      # 3) HERALD
             emit("HERALD", "done", f"{tag}: {reps['herald'].verdict} {reps['herald'].score:+.2f}")
             step("PULSE", f"{tag}: {len(crowd.get(key, []))} posts + positioning")
-            reps["pulse"] = self.pulse.analyse(key, crowd.get(key, []), data[key], derivs.get(key))  # 4) PULSE
+            reps["pulse"] = self.pulse.analyse(key, crowd.get(key, []), data[key], derivs.get(key), buzz.get(key))  # 4) PULSE
             emit("PULSE", "done", f"{tag}: {reps['pulse'].verdict} {reps['pulse'].score:+.2f}")
 
             st, note = self.structure(u, reps["prism"].details, derivs.get(key) or {}, data[key], snap["equity"])

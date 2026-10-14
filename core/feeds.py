@@ -19,6 +19,9 @@ from .sources import NSE, Delta, fnum
 
 log = logging.getLogger("feeds")
 UA = {"User-Agent": "sentinel6/1.0 (personal research script)"}
+BROWSER_HDR = {"User-Agent": ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) "
+                              "Chrome/129.0 Safari/537.36"), "Accept": "application/json, text/plain, */*"}
+REDDIT_UA = {"User-Agent": "windows:sentinel6:v1.0 (personal paper-trading research)"}
 
 
 @dataclass
@@ -47,6 +50,7 @@ class LiveFeeds:
         self.aliases = cfg.get("aliases", {})
         self.nse = NSE(self.timeout)
         self.delta = Delta(self.timeout)
+        self.diag: dict[str, str] = {}          # last HTTP result per crowd source (shown by --check)
 
     # ------------------------------------------------------------ derivatives
     def deriv(self, u, df) -> dict:
@@ -133,16 +137,59 @@ class LiveFeeds:
     def crowd(self, u) -> list[Post]:
         posts: list[Post] = []
         if self.cfg["pulse"].get("stocktwits", True) and u.segment in ("us_spot", "crypto_spot", "crypto_fut", "crypto_opt"):
-            st = u.symbol if u.segment == "us_spot" else (u.meta.get("und") or u.symbol.replace("USD", "")) + ".X"
+            st = u.symbol if u.segment == "us_spot" else self._base(u) + ".X"
             posts += self._stocktwits(st)
         if self.cfg["pulse"].get("reddit", True):
             posts += self._reddit(u.name or u.symbol)
         return posts
 
+    @staticmethod
+    def _base(u):
+        return (u.meta.get("und") or u.symbol).replace("USDT", "").replace("USD", "") if u.segment.startswith("crypto") else u.symbol
+
+    def buzz(self, u) -> dict | None:
+        """ApeWisdom Reddit/4chan mention stats for the ticker (None if not tracked)."""
+        if not self.cfg["pulse"].get("apewisdom", True):
+            return None
+        table = self._ape_table()
+        return table.get(("crypto" if u.segment.startswith("crypto") else "stocks", self._base(u).upper()))
+
+    _ape_cache: dict = {}
+    _ape_at = 0.0
+
+    def _ape_table(self):
+        import time as _t
+        if _t.time() - LiveFeeds._ape_at < 600 and LiveFeeds._ape_cache:
+            return LiveFeeds._ape_cache
+        out = {}
+        for kind, filt, pages in (("stocks", "all-stocks", 5), ("crypto", "all-crypto", 3)):
+            for page in range(1, pages + 1):
+                try:
+                    r = requests.get(f"https://apewisdom.io/api/v1.0/filter/{filt}/page/{page}",
+                                     headers=BROWSER_HDR, timeout=self.timeout)
+                    if r.status_code != 200:
+                        self.diag[f"ApeWisdom {kind}"] = f"HTTP {r.status_code}"
+                        break
+                    res = r.json().get("results", [])
+                    for x in res:
+                        out[(kind, str(x.get("ticker", "")).upper().replace(".X", ""))] = {
+                            "rank": x.get("rank"), "mentions": fnum(x.get("mentions")),
+                            "mentions_24h_ago": fnum(x.get("mentions_24h_ago")), "upvotes": fnum(x.get("upvotes")),
+                            "rank_24h_ago": x.get("rank_24h_ago")}
+                    if not res:
+                        break
+                except Exception as e:  # noqa
+                    self.diag[f"ApeWisdom {kind}"] = f"{type(e).__name__}"
+                    break
+        self.diag["ApeWisdom"] = f"{len(out)} tickers"
+        LiveFeeds._ape_cache, LiveFeeds._ape_at = out, _t.time()
+        return out
+
     def _stocktwits(self, st: str) -> list[Post]:
         try:
             r = requests.get(f"https://api.stocktwits.com/api/2/streams/symbol/{st}.json",
-                             headers=UA, timeout=self.timeout)
+                             headers=BROWSER_HDR, timeout=self.timeout)
+            self.diag["StockTwits"] = f"HTTP {r.status_code}"
             if r.status_code != 200:
                 return []
             out = []
@@ -150,8 +197,10 @@ class LiveFeeds:
                 ent = (m.get("entities") or {}).get("sentiment") or {}
                 created = datetime.fromisoformat(m["created_at"].replace("Z", "+00:00"))
                 out.append(Post(m.get("body", ""), created, ent.get("basic")))
+            self.diag["StockTwits"] += f" · {len(out)} msgs"
             return out
         except Exception as e:  # noqa
+            self.diag["StockTwits"] = type(e).__name__
             log.debug("stocktwits %s: %s", st, e)
             return []
 
@@ -159,17 +208,38 @@ class LiveFeeds:
         try:
             r = requests.get("https://www.reddit.com/search.json",
                              params={"q": query, "sort": "new", "t": "week", "limit": 100},
-                             headers=UA, timeout=self.timeout)
+                             headers=REDDIT_UA, timeout=self.timeout)
+            self.diag["Reddit json"] = f"HTTP {r.status_code}"
+            if r.status_code == 200:
+                out = []
+                for ch in r.json().get("data", {}).get("children", []):
+                    d = ch["data"]
+                    out.append(Post(f"{d.get('title', '')} {d.get('selftext', '')[:300]}",
+                                    datetime.fromtimestamp(d["created_utc"], timezone.utc)))
+                if out:
+                    return out
+        except Exception as e:  # noqa
+            self.diag["Reddit json"] = type(e).__name__
+        # fallback: RSS feed of the same search (rarely rate-limited)
+        try:
+            import feedparser
+            r = requests.get("https://www.reddit.com/search.rss",
+                             params={"q": query, "sort": "new", "t": "week", "limit": 100},
+                             headers=REDDIT_UA, timeout=self.timeout)
+            self.diag["Reddit rss"] = f"HTTP {r.status_code}"
             if r.status_code != 200:
                 return []
             out = []
-            for ch in r.json().get("data", {}).get("children", []):
-                d = ch["data"]
-                out.append(Post(f"{d.get('title', '')} {d.get('selftext', '')[:300]}",
-                                datetime.fromtimestamp(d["created_utc"], timezone.utc)))
+            for e in feedparser.parse(r.content).entries:
+                try:
+                    created = datetime(*e.updated_parsed[:6], tzinfo=timezone.utc)
+                except Exception:  # noqa
+                    created = _now()
+                out.append(Post(e.get("title", ""), created))
+            self.diag["Reddit rss"] += f" · {len(out)} posts"
             return out
         except Exception as e:  # noqa
-            log.debug("reddit %s: %s", query, e)
+            self.diag["Reddit rss"] = type(e).__name__
             return []
 
 
@@ -215,6 +285,14 @@ class DemoFeeds:
         srcs = ["Reuters", "Bloomberg", "CNBC", "Economic Times", "CoinDesk"]
         return [Headline(rng.choice(pool).format(n=n), rng.choice(srcs),
                          _now() - timedelta(hours=rng.uniform(1, 60))) for _ in range(rng.randint(3, 8))]
+
+    def buzz(self, u):
+        rng = self._rng(u.key + "b")
+        if rng.random() < 0.5:
+            return None
+        m24 = rng.uniform(5, 200)
+        return {"rank": rng.randint(1, 300), "mentions": m24 * rng.uniform(0.5, 4), "mentions_24h_ago": m24,
+                "upvotes": rng.uniform(10, 3000), "rank_24h_ago": rng.randint(1, 300)}
 
     def crowd(self, u):
         sym = u.key

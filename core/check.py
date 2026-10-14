@@ -101,7 +101,10 @@ def run_check(cfg, con):
 
     def crowd():
         p = feeds.crowd(u)
-        return bool(p), f"{len(p)} posts (StockTwits + Reddit)"
+        b = feeds.buzz(u)
+        diag = " · ".join(f"{k}: {v}" for k, v in feeds.diag.items())
+        btxt = f"NVDA mentions {b['mentions']:.0f} (24h ago {b['mentions_24h_ago']:.0f})" if b else "NVDA not in ApeWisdom top"
+        return bool(p) or bool(feeds._ape_cache), f"{len(p)} posts · {btxt} · {diag}"
 
     with con.status("Checking sources…"):
         row("yfinance (US / IN / crypto spot, indices, USDINR)", yf_spot)
@@ -115,6 +118,6 @@ def run_check(cfg, con):
         row("Delta India candles BTCUSD", delta_candles)
         row("Delta India options · BTC", delta_opts)
         row("News (Yahoo + Google News)", news)
-        row("Crowd (StockTwits + Reddit)", crowd)
+        row("Crowd (StockTwits, Reddit, ApeWisdom)", crowd)
     con.print(t)
     con.print("[dim]Paste this table back to Claude if anything says FAIL.")

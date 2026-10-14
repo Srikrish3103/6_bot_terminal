@@ -52,10 +52,28 @@ class Pulse(Agent):
             return None, info, notes
         return clip(sum(parts) / len(parts)), info, notes
 
-    def analyse(self, sym, posts, df, deriv=None):
+    def analyse(self, sym, posts, df, deriv=None, buzz=None):
         pc = self.cfg["pulse"]
         now = datetime.now(timezone.utc)
         pos_score, pos_info, pos_notes = self.positioning(deriv or {}, float(df["Close"].iloc[-1]))
+        if buzz:
+            pos_info = {**(pos_info or {}), "buzz": buzz}
+        if len(posts) < 5 and buzz and buzz.get("mentions_24h_ago"):
+            # no readable posts, but we know how loud the crowd is: use it for the hype filter
+            vel = buzz["mentions"] / max(buzz["mentions_24h_ago"], 1.0)
+            c = df["Close"]
+            ext = (float(c.iloc[-1]) - float(ema(c, 20).iloc[-1])) / max(float(atr(df).iloc[-1]), 1e-9)
+            notes = [f"Mentions {buzz['mentions']:.0f} vs {buzz['mentions_24h_ago']:.0f} 24h ago (x{vel:.1f}, rank #{buzz.get('rank')})"]
+            hype = vel >= pc["hype_velocity"] and abs(ext) >= pc["hype_extension_atr"]
+            score = pos_score if pos_score is not None else 0.0
+            if hype:
+                score *= 0.3
+                notes.append(f"HYPE: mention spike x{vel:.1f} with price {ext:+.1f} ATR from EMA20")
+            v = "HYPE" if hype else "BULLISH" if score > 0.15 else "BEARISH" if score < -0.15 else "NEUTRAL"
+            return self.report(sym, clip(score), v, "MODERATE" if pos_score is not None else "LOW",
+                               {"posts": len(posts), "velocity": round(vel, 2), "extension_atr": round(ext, 2),
+                                "hype": hype, "positioning": pos_info,
+                                "pos_score": None if pos_score is None else round(pos_score, 2)}, notes + pos_notes)
         if len(posts) < 5:
             if pos_score is not None:
                 v = "BULLISH" if pos_score > 0.15 else "BEARISH" if pos_score < -0.15 else "NEUTRAL"
@@ -78,6 +96,8 @@ class Pulse(Agent):
         last24 = sum(a <= 24 for a in ages)
         span_days = max(1.0, min(7.0, max(ages) / 24))
         velocity = last24 / max(len(posts) / span_days, 1e-9)
+        if buzz and buzz.get("mentions_24h_ago"):
+            velocity = max(velocity, buzz["mentions"] / max(buzz["mentions_24h_ago"], 1.0))
 
         c = df["Close"]
         ext = (float(c.iloc[-1]) - float(ema(c, 20).iloc[-1])) / max(float(atr(df).iloc[-1]), 1e-9)

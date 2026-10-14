@@ -127,6 +127,7 @@ herald:
 pulse:
   reddit: true
   stocktwits: true
+  apewisdom: true             # Reddit/4chan mention counts (free API) for mention velocity
   hype_velocity: 3.0
   hype_extension_atr: 2.0
   positioning_weight: 0.5      # share of PULSE score from PCR / funding / OI when available
