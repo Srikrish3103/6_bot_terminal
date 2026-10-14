@@ -4,6 +4,8 @@
   python run.py --demo          # offline synthetic data (no internet needed)
   python run.py --loop 60       # repeat every 60 minutes
   python run.py --no-exec       # analyse only, don't open paper positions
+  python run.py --web           # web dashboard at http://localhost:8765 (recommended)
+  python run.py --web --demo    # web dashboard on offline demo data
   python run.py --live          # live terminal dashboard (cycle every 15 min, quotes every 30 s)
   python run.py --live --demo   # live terminal on offline demo data
   python run.py --check         # test every live data source (NSE, Delta, yfinance, news)
@@ -37,6 +39,9 @@ def main():
     ap.add_argument("--loop", type=float, default=0, help="minutes between cycles (0 = run once)")
     ap.add_argument("--no-exec", action="store_true", help="don't open paper positions")
     ap.add_argument("--open", action="store_true", help="open HTML report in browser")
+    ap.add_argument("--web", action="store_true", help="web dashboard at http://localhost:PORT")
+    ap.add_argument("--port", type=int, default=8765)
+    ap.add_argument("--no-browser", action="store_true", help="web: don't auto-open the browser")
     ap.add_argument("--live", action="store_true", help="full-screen live terminal")
     ap.add_argument("--cycle", type=float, default=None, help="live: minutes between full cycles (default 15, demo 2)")
     ap.add_argument("--tick", type=float, default=None, help="live: seconds between quote refreshes (default 30, demo 2)")
@@ -62,6 +67,13 @@ def main():
     if a.check:
         from core.check import run_check
         run_check(cfg, con)
+        return
+
+    if a.web:
+        from core.web import run_web
+        run_web(cfg, ROOT, demo=a.demo, execute=not a.no_exec,
+                cycle_min=a.cycle or (2 if a.demo else 15), tick_sec=a.tick or (2 if a.demo else 30),
+                pace=0.3 if a.demo else 0.1, port=a.port, open_browser=not a.no_browser)
         return
 
     if a.live:

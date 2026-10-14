@@ -49,6 +49,7 @@ class State:
         self.positions, self.realized, self.start, self.base = [], 0.0, 0.0, "INR"
         self.cycles, self.last_cycle, self.next_cycle, self.next_tick = 0, None, 0.0, 0.0
         self.busy, self.demo = False, False
+        self.run = None                          # last full cycle (funnel, results, actions)
 
     def event(self, agent, state, msg):
         with self.lock:
@@ -102,7 +103,7 @@ class Engine(threading.Thread):
         try:
             run = self.desk.cycle(execute=self.execute, on=st.event, pace=self.pace)
             with st.lock:
-                st.scan, st.results = run["scan"], run["results"]
+                st.scan, st.results, st.run = run["scan"], run["results"], run
                 for r in run["scan"]:
                     st.quotes[r["key"]] = {"px": r["price"], "prev": r["price"], "ref": r["price"], "t": time.time()}
                 st.cycles += 1

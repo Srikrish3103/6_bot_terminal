@@ -45,14 +45,30 @@ python -m venv .venv
 .venv\Scripts\activate
 pip install -r requirements.txt
 python run.py --check          :: test NSE, Delta, yfinance, news feeds
-python run.py --live --demo    :: offline demo of everything
-python run.py --live           :: live terminal
+python run.py --web --demo     :: dashboard on offline demo data
+python run.py --web            :: dashboard on live data  -> http://localhost:8765
 ```
-Or double-click `run.bat` (opens the live terminal). Use Windows Terminal / cmd / PowerShell at full width (PyCharm: use the Terminal tab).
+Or double-click `run.bat` — it installs everything on first run and opens the dashboard in your browser.
+
+## Web dashboard (`--web`)
+Opens `http://localhost:8765` (local only, nothing is exposed to the internet). It refreshes every 1.5 s:
+
+| Section | Shows |
+|---|---|
+| Header | Cycle status + countdown, equity, open / realized P&L, **Run cycle now** button |
+| Agents | What each of the 6 agents is doing right now |
+| Funnel | How many instruments survive each stage (universe → scored → shortlisted → setup → news/crowd agree → risk approved → TRADE), overall and per segment |
+| Suggested trades | One card per TRADE / HOLD: exact order lines (e.g. `BUY 1 lot (500) RELIANCE 1,980 CE 05 Nov @ ₹15.94`), exit rule, risk ₹, reward R, agent score bars, and an expandable "why" with every agent report and AEGIS check |
+| On watch / Rejected | Setups waiting for confirmation, and what the desk rejected, with reasons |
+| Paper book | Open positions with live P&L and distance to stop, closed trades |
+| Watchlist + event log | KESTREL ranking with live prices, running agent log |
+
+Filter the cards by segment with the tabs (US / IN / CRYPTO / F&O / C-FUT / C-OPT).
 
 ## Commands
 | Command | Effect |
 |---|---|
+| `python run.py --web` | **web dashboard** (recommended): `--port 8765`, `--no-browser` |
 | `python run.py --live` | live terminal: quotes every 30 s, full cycle every 15 min, live stop/target/expiry exits |
 | `python run.py --live --demo` | same on offline synthetic data (2 s ticks, 2 min cycles) |
 | `--cycle M --tick S` | live: change cycle minutes / quote seconds |
@@ -82,7 +98,10 @@ core/feeds.py        news, crowd, derivatives feeds (+ offline demo)
 core/paper.py        multi-leg SQLite paper book
 core/desk.py         pipeline orchestration
 core/view.py         console + HTML report
-core/live.py         live full-screen terminal
+core/live.py         live engine + full-screen terminal
+core/web.py          local web server for the dashboard
+core/suggest.py      funnel counts + plain-English trade instructions
+web/dashboard.html   the dashboard page
 core/check.py        --check source tester
 data/paper_v2.db     your paper book (not committed)
 ```

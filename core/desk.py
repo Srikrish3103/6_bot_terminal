@@ -21,6 +21,7 @@ from .feeds import LiveFeeds, DemoFeeds
 from .instruments import build_universe
 from .paper import PaperBook
 from .sources import Delta, fnum
+from .suggest import action, funnel
 
 log = logging.getLogger("desk")
 SPOT = ("us_spot", "in_spot", "crypto_spot")
@@ -209,7 +210,11 @@ class Desk:
 
         for a in ("HERALD", "PULSE", "PRISM", "AEGIS", "ARBITER"):
             emit(a, "idle", "")
-        return {"ts": t0.isoformat(timespec="seconds"), "demo": self.demo, "base": self.base,
+        for res in results:
+            res["action"] = action(res, self.base, self.rates)
+        fun = funnel(self.universe, data, scan_rows, results, self.cfg["kestrel"]["min_score"],
+                     self.cfg["arbiter"]["conflict_threshold"])
+        return {"ts": t0.isoformat(timespec="seconds"), "demo": self.demo, "base": self.base, "funnel": fun,
                 "secs": round((datetime.now() - t0).total_seconds(), 1),
                 "scanned": len(scan_rows), "scan": scan_rows[:30], "results": results,
                 "book": self.book.snapshot(prices, self.rates), "closed": self.book.closed_positions(10)}
