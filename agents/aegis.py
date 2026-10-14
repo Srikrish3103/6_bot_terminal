@@ -39,12 +39,23 @@ class Aegis(Agent):
         seg_exp = sum(p["notional_base"] for p in opens if p["segment"] == u.segment)
         seg_cap = eq * ac.get("max_segment_pct", {}).get(u.segment, 100) / 100
         holding = any(p["key"] == key for p in opens)
+        same = [p for p in opens if p.get("asset") == u.asset and p["key"] != key]
+        if holding or same:
+            via = same[0] if (same and not holding) else next(p for p in opens if p["key"] == key)
+            where = f"{via['name']} {via['label']}" + ("" if holding else f" ({via['segment']})")
+            detail = (f"Already holding {u.symbol} — {where}" if holding else
+                      f"Already exposed to {u.asset.split(':')[1]} via {where}; no second position on the same asset")
+            return self.report(key, 0, "HOLDING", "HIGH",
+                               {"checks": {"Existing position": {"pass": True, "detail": detail}},
+                                "units": 0, "notional_base": 0, "loss_at_stop_base": 0, "rr": st["rr"], "fails": [],
+                                "already_holding": True, "held_via": None if holding else via["key"],
+                                "held_detail": detail}, [detail])
 
         d = 1 if st["direction"] == "LONG" else -1
         corr_max, corr_with = 0.0, None
         rets = data[key]["Close"].pct_change().tail(90)
         for p in opens:
-            if p["key"] in data and p["key"] != key:
+            if p["key"] in data and p["key"] != key and p.get("asset") != u.asset:
                 other = data[p["key"]]["Close"].pct_change().tail(90)
                 j = pd.concat([rets.reset_index(drop=True), other.reset_index(drop=True)], axis=1).dropna()
                 if len(j) > 30:
@@ -80,7 +91,7 @@ class Aegis(Agent):
                 and len(opens) < ac["max_positions"] and not holding,
                 f"gross {100 * (gross + notional) / eq:.0f}% · {u.label} {100 * (seg_exp + notional) / eq:.0f}%"
                 f"/{100 * seg_cap / eq:.0f}% · {len(opens)}/{ac['max_positions']} open"
-                + (" · already holding" if holding else "")),
+                ),
             "Risk / reward": (rr_ok, rr_txt),
         }
         ok = all(v[0] for v in checks.values())

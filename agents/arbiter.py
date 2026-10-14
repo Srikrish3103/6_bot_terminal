@@ -21,7 +21,8 @@ class Arbiter(Agent):
         aegis = reps["aegis"]
 
         if aegis.details.get("already_holding"):
-            dec, why = "HOLD", "Position already open — managed by stop/target"
+            dec, why = "HOLD", (aegis.details.get("held_detail") if aegis.details.get("held_via")
+                                else "Position already open — managed by stop/target")
         elif aegis.verdict == "REJECTED":
             dec, why = "REJECT", f"AEGIS veto: {', '.join(aegis.details['fails'])}"
         elif reps["prism"].verdict != "SETUP":

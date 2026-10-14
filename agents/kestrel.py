@@ -28,7 +28,7 @@ class Kestrel(Agent):
         raw = (0.40 * math.tanh(mom / 2) + 0.25 * trend + 0.15 * prox
                + 0.20 * math.tanh(vr - 1) * d)
         return {
-            "key": u.key, "symbol": u.symbol, "segment": u.segment, "seg": u.label, "ccy": u.ccy,
+            "key": u.key, "asset": u.asset, "symbol": u.symbol, "segment": u.segment, "seg": u.label, "ccy": u.ccy,
             "price": float(px), "chg_1d": float(c.iloc[-1] / c.iloc[-2] - 1), "ret_20d": ret20,
             "momentum_z": round(mom, 2), "trend": trend, "vol_ratio": round(vr, 2),
             "atr_pct": float(atr(df).iloc[-1]) / px, "direction": "LONG" if raw >= 0 else "SHORT",
@@ -47,11 +47,14 @@ class Kestrel(Agent):
         rows = [r for r in rows if not (r["segment"] in ("us_spot", "in_spot", "crypto_spot")
                                        and r["direction"] == "SHORT" and not segs[r["segment"]].get("allow_short", False))]
         rows.sort(key=lambda r: r["score"], reverse=True)
-        picks, count = [], {}
+        picks, count, seen = [], {}, set()
         for r in rows:
             n = segs[r["segment"]].get("top_n", 2)
+            if r["asset"] in seen:          # same coin/stock already picked in another segment this cycle
+                continue
             if r["score"] >= self.cfg["kestrel"]["min_score"] and count.get(r["segment"], 0) < n:
                 count[r["segment"]] = count.get(r["segment"], 0) + 1
+                seen.add(r["asset"])
                 picks.append(r)
         reports = [self.report(r["key"], clip(r["raw"]), f"#{i + 1} · {r['score']}",
                                "HIGH" if r["score"] >= 70 else "MODERATE", details=r)

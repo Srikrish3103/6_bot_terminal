@@ -50,3 +50,20 @@ class Underlying:
     @property
     def label(self):
         return SEG_LABEL[self.segment]
+
+    @property
+    def asset(self):
+        return asset_of(self.segment, self.symbol, self.meta)
+
+
+def asset_of(segment: str, symbol: str, meta: dict | None = None) -> str:
+    """Same economic asset across segments: STRK spot == STRKUSDT perp == STRK options; RELIANCE cash == RELIANCE F&O."""
+    if segment.startswith("crypto"):
+        base = str((meta or {}).get("und") or symbol).upper()
+        for suf in ("-PERP", "PERP", "USDT", "USDC", "USD", "-"):
+            if base.endswith(suf) and len(base) > len(suf):
+                base = base[: -len(suf)]
+        return f"crypto:{base}"
+    if segment in ("in_spot", "in_fno"):
+        return f"in:{symbol.replace('.NS', '').upper()}"
+    return f"us:{symbol.upper()}"

@@ -51,6 +51,14 @@ class Desk:
         self.stats = {}
 
     # ------------------------------------------------------------------ helpers
+    def snapshot(self, prices):
+        from .instruments import asset_of
+        snap = self.book.snapshot(prices, self.rates)
+        for p in snap["positions"]:
+            u = self.umap.get(p["key"])
+            p["asset"] = u.asset if u else asset_of(p["segment"], p["symbol"])
+        return snap
+
     def last_prices(self):
         return {k: float(df["Close"].iloc[-1]) for k, df in self.data.items()}
 
@@ -157,7 +165,7 @@ class Desk:
         lows = {k: float(df["Low"].iloc[-1]) for k, df in data.items()}
         for p, why, pnl in self.book.check_exits(prices, self.rates, highs, lows):
             emit("BOOK", "trade", f"CLOSED {p['label']} at {why} → P&L {self.base} {pnl:+,.0f}")
-        snap = self.book.snapshot(prices, self.rates)
+        snap = self.snapshot(prices)
 
         # 1) KESTREL
         step("KESTREL", f"Ranking {len(data)} assets…")
@@ -224,7 +232,7 @@ class Desk:
                 self.book.open(u, direction, st, a["units"], a["loss_at_stop_base"], st.get("rate", 0))
                 emit("BOOK", "trade", f"OPENED {st['name']} {st['label']} ×{a['units']:,.4g} · "
                                       f"max loss {self.base} {a['loss_at_stop_base']:,.0f}")
-                snap = self.book.snapshot(prices, self.rates)   # later picks see the new exposure
+                snap = self.snapshot(prices)                     # later picks see the new exposure
             results.append({"key": key, "symbol": u.symbol, "segment": u.segment, "seg": u.label,
                             "direction": direction, "structure": st, "structure_note": note,
                             "positioning": (reps["pulse"].details or {}).get("positioning"),

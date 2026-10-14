@@ -70,6 +70,10 @@ def action(res, base, rates):
     units = ag.get("units") or 0
     venue = {"us_spot": "US stock (INDmoney)", "in_spot": "NSE cash", "crypto_spot": "crypto spot",
              "in_fno": "NSE F&O", "crypto_fut": "Delta India perpetual", "crypto_opt": "Delta India options"}[seg]
+    if rep["aegis"]["verdict"] == "HOLDING":
+        return {"headline": f"Hold — {ag.get('held_detail', 'position already open')}", "legs": [],
+                "exit": "Managed by its existing stop / target", "venue": venue, "units": 0, "risk": None,
+                "risk_txt": "in book"}
     if not st:
         return {"headline": f"No tradable structure for {sym}", "legs": [], "exit": "", "risk": None,
                 "venue": venue, "units": 0}

@@ -69,7 +69,7 @@ def console_report(run: dict, con: Console | None = None):
                   f"{r['herald']['verdict']} {r['herald']['score']:+.2f}",
                   f"{r['pulse']['verdict']} {r['pulse']['score']:+.2f}",
                   struct_text(res),
-                  ("[green]" if ag["verdict"] == "APPROVED" else "[red]") + ag["verdict"]
+                  {"APPROVED": "[green]", "HOLDING": "[cyan]"}.get(ag["verdict"], "[red]") + ag["verdict"]
                   + (f" ×{fu(units, (res['structure'] or {}).get('integer', True))}" if units else ""),
                   f"[{DEC[a['verdict']]}]{a['verdict']}[/] {a['details']['composite']:+.2f}", a["details"]["reason"])
     con.print(d)

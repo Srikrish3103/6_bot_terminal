@@ -217,8 +217,9 @@ def render(st: State) -> Layout:
             dt.add_row(Text(SEG_LABEL[res["segment"]], style=SEG_COLOR[res["segment"]]), f"[bold]{res['symbol']}",
                        res["direction"], phu,
                        Text(f"{stc['name']} {stc['label']}" if stc else "none", style="#e8ecff" if stc else "#ff5b5b"),
-                       Text(("PASS" if r["aegis"]["verdict"] == "APPROVED" else "VETO") + (f" ×{units:,.4g}" if units else ""),
-                            style="#4dff8a" if r["aegis"]["verdict"] == "APPROVED" else "#ff5b5b"),
+                       Text({"APPROVED": "PASS", "HOLDING": "HELD"}.get(r["aegis"]["verdict"], "VETO")
+                            + (f" ×{units:,.4g}" if units else ""),
+                            style={"APPROVED": "#4dff8a", "HOLDING": "#3de0c4"}.get(r["aegis"]["verdict"], "#ff5b5b")),
                        Text(a["verdict"], style=DEC.get(a["verdict"], "")), Text(a["details"]["reason"], style="#8d96c4"))
         decisions = Panel(dt if st.results else Text("Waiting for first cycle…", style="#5a6390"),
                           title="[bold #ffd23d]ARBITER · DECISIONS", border_style="#26305c")
