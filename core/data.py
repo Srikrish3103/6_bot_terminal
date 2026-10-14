@@ -1,93 +1,116 @@
-"""Market data (yfinance) + FX conversion helpers."""
+"""Candles for every underlying (yfinance + Delta), FX conversion to the base currency."""
 from __future__ import annotations
 
 import logging
+from concurrent.futures import ThreadPoolExecutor
 
 import numpy as np
 import pandas as pd
 
+from .sources import Delta
+
 log = logging.getLogger("data")
 
-FX_FALLBACK = {"INR": 88.0, "JPY": 150.0, "CAD": 1.38, "EUR": 0.92, "GBP": 0.78, "AUD": 1.52}
+FX_FALLBACK = {"USD": 1.0, "INR": 88.0}       # units per 1 USD
+CCY_SIGN = {"INR": "₹", "USD": "$"}
 
 
-def asset_class(sym: str) -> str:
-    if sym.endswith("=X"):
-        return "forex"
-    if sym.endswith("-USD") or sym.endswith("-USDT"):
-        return "crypto"
-    if sym.endswith(".NS") or sym.endswith(".BO"):
-        return "stocks_in"
-    return "stocks_us"
-
-
-def quote_ccy(sym: str) -> str:
-    c = asset_class(sym)
-    if c == "forex":
-        return sym.replace("=X", "")[3:6]
-    if c == "stocks_in":
-        return "INR"
-    return "USD"
-
-
-def fetch_ohlcv(symbols: list[str], period: str = "2y") -> dict[str, pd.DataFrame]:
-    import yfinance as yf
-
+def fetch_candles(universe, period="2y", timeout=10) -> dict[str, pd.DataFrame]:
     out: dict[str, pd.DataFrame] = {}
-    try:
-        raw = yf.download(symbols, period=period, interval="1d", group_by="ticker",
-                          auto_adjust=True, threads=True, progress=False)
-    except Exception as e:  # noqa
-        log.error("yfinance download failed: %s", e)
-        return out
-    for s in symbols:
+    yf_items = [u for u in universe if u.source == "yf"]
+    dl_items = [u for u in universe if u.source == "delta"]
+
+    if yf_items:
+        import yfinance as yf
+        syms = sorted({u.data_symbol for u in yf_items})
         try:
-            df = raw[s] if isinstance(raw.columns, pd.MultiIndex) else raw
-            df = df[["Open", "High", "Low", "Close", "Volume"]].dropna(subset=["Close"])
-            df["Volume"] = df["Volume"].fillna(0)
-            if len(df) >= 120:
-                out[s] = df
-            else:
-                log.warning("%s: only %d bars, skipped", s, len(df))
+            raw = yf.download(syms, period=period, interval="1d", group_by="ticker",
+                              auto_adjust=True, threads=True, progress=False)
         except Exception as e:  # noqa
-            log.warning("%s: no data (%s)", s, e)
+            log.error("yfinance download failed: %s", e)
+            raw = None
+        if raw is not None and len(raw):
+            for u in yf_items:
+                try:
+                    df = raw[u.data_symbol] if isinstance(raw.columns, pd.MultiIndex) else raw
+                    df = _clean(df)
+                    if df is not None:
+                        out[u.key] = df
+                except Exception:  # noqa
+                    pass
+
+    if dl_items:
+        d = Delta(timeout)
+        syms = sorted({u.data_symbol for u in dl_items})
+        with ThreadPoolExecutor(max_workers=6) as ex:
+            res = dict(zip(syms, ex.map(d.candles, syms)))
+        for u in dl_items:
+            df = _clean(res.get(u.data_symbol))
+            if df is not None:
+                out[u.key] = df
+    missing = len(universe) - len(out)
+    if missing:
+        log.info("%d underlyings had no/short data and were skipped", missing)
     return out
 
 
-def fx_rates(data: dict[str, pd.DataFrame]) -> dict[str, float]:
-    """Units of CCY per 1 USD."""
+def _clean(df):
+    if df is None or len(df) == 0:
+        return None
+    df = df[["Open", "High", "Low", "Close", "Volume"]].dropna(subset=["Close"]).copy()
+    df["Volume"] = df["Volume"].fillna(0)
+    return df if len(df) >= 120 else None
+
+
+def fx_rates(live: bool = True) -> dict[str, float]:
     rates = dict(FX_FALLBACK)
-    rates["USD"] = 1.0
-    for ccy in list(FX_FALLBACK):
-        usd_x, x_usd = f"USD{ccy}=X", f"{ccy}USD=X"
-        if usd_x in data:
-            rates[ccy] = float(data[usd_x]["Close"].iloc[-1])
-        elif x_usd in data:
-            rates[ccy] = 1 / float(data[x_usd]["Close"].iloc[-1])
+    if live:
+        try:
+            import yfinance as yf
+            c = yf.download("INR=X", period="5d", interval="1d", progress=False, auto_adjust=True)["Close"].dropna()
+            if len(c):
+                rates["INR"] = float(np.asarray(c).ravel()[-1])
+        except Exception as e:  # noqa
+            log.debug("USDINR fetch failed: %s", e)
     return rates
 
 
-def to_usd(amount: float, sym: str, rates: dict[str, float]) -> float:
-    return amount / rates.get(quote_ccy(sym), 1.0)
+def convert(amount: float, ccy: str, base: str, rates: dict) -> float:
+    if ccy == base:
+        return amount
+    return amount / rates.get(ccy, 1.0) * rates.get(base, 1.0)
 
 
-# ---------------------------------------------------------------- demo data
-def synthetic_ohlcv(symbols: list[str], seed: int = 7, bars: int = 400) -> dict[str, pd.DataFrame]:
+def hist_vol(df: pd.DataFrame, n: int = 20, crypto: bool = False) -> float:
+    r = np.log(df["Close"]).diff().dropna().tail(n)
+    return float(r.std() * np.sqrt(365 if crypto else 252)) if len(r) > 5 else 0.0
+
+
+# ------------------------------------------------------------------ demo data
+BASE_PX = {"us_spot": 250, "in_spot": 1500, "crypto_spot": 2000, "in_fno": 1800,
+           "crypto_fut": 3000, "crypto_opt": 60000}
+VOL = {"us_spot": 0.02, "in_spot": 0.015, "crypto_spot": 0.035, "in_fno": 0.016,
+       "crypto_fut": 0.035, "crypto_opt": 0.03}
+DEMO_LEVELS = {"in_fno:NIFTY": 25000, "in_fno:BANKNIFTY": 56000, "in_fno:FINNIFTY": 26500,
+               "in_fno:MIDCPNIFTY": 13000, "crypto_opt:BTC": 110000, "crypto_opt:ETH": 4000,
+               "crypto_fut:BTCUSD": 110000, "crypto_fut:ETHUSD": 4000}
+
+
+def synthetic_candles(universe, seed: int = 7, bars: int = 400) -> dict[str, pd.DataFrame]:
     rng = np.random.default_rng(seed)
     idx = pd.bdate_range(end=pd.Timestamp.today().normalize(), periods=bars)
-    base = {"forex": 1.2, "crypto": 3000, "stocks_in": 1500, "stocks_us": 200}
-    vol = {"forex": 0.005, "crypto": 0.035, "stocks_in": 0.015, "stocks_us": 0.02}
     out = {}
-    for i, s in enumerate(symbols):
-        c = asset_class(s)
-        drift = rng.choice([-0.0015, 0.0, 0.0012, 0.0025]) * (0.3 if c == "forex" else 1)
-        r = rng.normal(drift, vol[c], bars)
-        close = base[c] * (1 + 0.3 * rng.random()) * np.exp(np.cumsum(r))
-        spread = np.abs(rng.normal(0, vol[c], bars)) * close
-        high, low = close + spread, close - spread
+    for u in universe:
+        s = u.segment
+        vol = VOL[s] * (0.6 if u.is_index else 1.0)
+        drift = rng.choice([-0.0015, 0.0, 0.0012, 0.0025])
+        r = rng.normal(drift, vol, bars)
+        target = DEMO_LEVELS.get(u.key, BASE_PX[s] * (0.3 + 1.5 * rng.random()))
+        close = np.exp(np.cumsum(r))
+        close = close / close[-1] * target
+        spread = np.abs(rng.normal(0, vol, bars)) * close
         op = np.r_[close[0], close[:-1]]
-        v = 0 if c == "forex" else 1e6
-        volu = (rng.lognormal(0, 0.3, bars) * v) * (1 + np.clip(r, 0, None) * 30)
-        out[s] = pd.DataFrame({"Open": op, "High": np.maximum(high, op), "Low": np.minimum(low, op),
-                               "Close": close, "Volume": volu}, index=idx)
+        volu = rng.lognormal(0, 0.3, bars) * 1e6 * (1 + np.clip(r, 0, None) * 30)
+        out[u.key] = pd.DataFrame({"Open": op, "High": np.maximum(close + spread, op),
+                                   "Low": np.minimum(close - spread, op), "Close": close, "Volume": volu}, index=idx)
     return out

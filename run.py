@@ -6,6 +6,7 @@
   python run.py --no-exec       # analyse only, don't open paper positions
   python run.py --live          # live terminal dashboard (cycle every 15 min, quotes every 30 s)
   python run.py --live --demo   # live terminal on offline demo data
+  python run.py --check         # test every live data source (NSE, Delta, yfinance, news)
   python run.py --book          # show paper book
   python run.py --reset         # wipe paper book
 """
@@ -40,6 +41,7 @@ def main():
     ap.add_argument("--cycle", type=float, default=None, help="live: minutes between full cycles (default 15, demo 2)")
     ap.add_argument("--tick", type=float, default=None, help="live: seconds between quote refreshes (default 30, demo 2)")
     ap.add_argument("--no-screen", action="store_true", help="live: don't use alternate screen")
+    ap.add_argument("--check", action="store_true", help="test live data sources and exit")
     ap.add_argument("--book", action="store_true")
     ap.add_argument("--reset", action="store_true")
     ap.add_argument("-v", "--verbose", action="store_true")
@@ -52,9 +54,14 @@ def main():
     con = Console()
 
     if a.reset:
-        db = ROOT / "data" / ("paper_demo.db" if a.demo else "paper.db")
+        db = ROOT / "data" / ("paper_demo_v2.db" if a.demo else "paper_v2.db")
         db.unlink(missing_ok=True)
         con.print(f"[yellow]Paper book reset: {db.name}")
+        return
+
+    if a.check:
+        from core.check import run_check
+        run_check(cfg, con)
         return
 
     if a.live:
@@ -68,18 +75,18 @@ def main():
     desk = Desk(cfg, ROOT, demo=a.demo)
 
     if a.book:
-        from core.data import fx_rates
         from rich.table import Table
-        snap = desk.book.snapshot({}, fx_rates({}))
-        t = Table(title=f"Paper book · realized P&L ${snap['realized']:+,.0f}")
-        for c in ("Symbol", "Side", "Qty", "Entry", "Stop", "Target", "Opened"):
+        from core.data import CCY_SIGN
+        cur = CCY_SIGN.get(desk.base, desk.base)
+        t = Table(title=f"Paper book · realized P&L {cur}{desk.book.realized():+,.0f}")
+        for c in ("Seg", "Position", "Units", "Und entry", "Stop", "Target", f"Max loss {cur}", "Opened"):
             t.add_column(c)
-        for p in snap["positions"]:
-            t.add_row(p["symbol"], p["side"], f"{p['qty']:,.4f}", f"{p['entry']:,.4f}",
-                      f"{p['stop']:,.4f}", f"{p['target']:,.4f}", p["opened_at"])
+        for p in desk.book.open_positions():
+            t.add_row(p["segment"], f"{p['name']} {p['label']}", f"{p['units']:,.4g}", f"{p['und_entry']:,.4f}",
+                      f"{p['und_stop']:,.4f}", f"{p['und_target']:,.4f}", f"{p['max_loss_base']:,.0f}", p["opened_at"])
         con.print(t)
         for p in desk.book.closed_positions():
-            con.print(f"closed {p['symbol']} {p['side']} {p['exit_reason']} P&L ${p['pnl_usd']:+,.0f}")
+            con.print(f"closed {p['name']} {p['label']} · {p['exit_reason']} · P&L {cur}{p['pnl_base']:+,.0f}")
         return
 
     while True:

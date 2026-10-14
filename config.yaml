@@ -1,17 +1,74 @@
 # SENTINEL-6 — local multi-agent market desk (PAPER TRADING ONLY)
 
 account:
-  starting_equity: 100000      # in base currency (USD)
-  base_currency: USD
+  base_currency: INR            # INR or USD — all P&L / risk shown in this
+  starting_equity: 1000000      # ₹10,00,000
 
-universe:                      # yfinance symbols
-  stocks_us:  [AAPL, NVDA, MSFT, AMZN, TSLA, META, GOOGL, AMD]
-  stocks_in:  [RELIANCE.NS, HDFCBANK.NS, INFY.NS, TCS.NS, ICICIBANK.NS]
-  crypto:     [BTC-USD, ETH-USD, SOL-USD, BNB-USD, ADA-USD]
-  forex:      [EURUSD=X, GBPUSD=X, USDJPY=X, AUDUSD=X, USDCAD=X]
+# ------------------------------------------------------------------ segments
+segments:
+  us_spot:
+    enabled: true
+    top_n: 2                    # picks passed to the desk each cycle
+    symbols: [AAPL, NVDA, MSFT, AMZN, TSLA, META, GOOGL, AMD, AVGO, NFLX]
+    fractional: true            # INDmoney allows fractional US shares
 
-# Friendly names used for news / social search
+  in_spot:
+    enabled: true
+    top_n: 2
+    symbols: [RELIANCE.NS, HDFCBANK.NS, ICICIBANK.NS, INFY.NS, TCS.NS, SBIN.NS,
+              BHARTIARTL.NS, LT.NS, ITC.NS, AXISBANK.NS, KOTAKBANK.NS, TATAMOTORS.NS]
+
+  crypto_spot:
+    enabled: true
+    top_n: 2
+    symbols: [BTC-USD, ETH-USD, SOL-USD, BNB-USD, XRP-USD, ADA-USD, DOGE-USD, AVAX-USD, LINK-USD]
+    fractional: true
+
+  in_fno:
+    enabled: true
+    top_n: 3
+    universe: full              # full = every NSE F&O underlying (lot sizes from NSE)
+    indices: [NIFTY, BANKNIFTY, FINNIFTY, MIDCPNIFTY, NIFTYNXT50]
+    instrument: options         # options | futures  (options falls back to futures if no chain)
+    min_dte: 3                  # skip expiries closer than this (days)
+    max_dte: 45
+
+  crypto_fut:
+    enabled: true
+    top_n: 3
+    scan_top_by_turnover: 40    # Delta perpetuals ranked by 24h turnover
+
+  crypto_opt:
+    enabled: true
+    top_n: 2
+    underlyings: [BTC, ETH]     # Delta Exchange India options
+    min_dte: 2
+    max_dte: 35
+
+# ------------------------------------------------------------------ options logic
+options:
+  iv_cheap: 1.10               # ATM IV / 20d realised vol <= this -> buy call/put
+  iv_rich: 1.50                # >  this -> credit spread; in between -> debit spread
+  min_pop_credit: 0.60         # credit spreads need >= 60% prob. (realised vol) short strike expires OTM
+  rate_in: 0.065               # risk-free for NSE option model
+  rate_crypto: 0.0
+
+# News / social search names (anything missing uses the symbol)
 aliases:
+  NIFTY: Nifty 50
+  BANKNIFTY: Bank Nifty
+  FINNIFTY: Nifty Financial Services
+  MIDCPNIFTY: Nifty Midcap Select
+  NIFTYNXT50: Nifty Next 50
+  BTC: Bitcoin
+  ETH: Ethereum
+  SOL: Solana
+  XRP: XRP Ripple
+  DOGE: Dogecoin
+  BNB: BNB crypto
+  ADA: Cardano
+  AVAX: Avalanche crypto
+  LINK: Chainlink
   AAPL: Apple
   NVDA: Nvidia
   MSFT: Microsoft
@@ -19,34 +76,30 @@ aliases:
   TSLA: Tesla
   META: Meta Platforms
   GOOGL: Alphabet Google
-  AMD: AMD
-  RELIANCE.NS: Reliance Industries
-  HDFCBANK.NS: HDFC Bank
-  INFY.NS: Infosys
-  TCS.NS: Tata Consultancy Services
-  ICICIBANK.NS: ICICI Bank
-  BTC-USD: Bitcoin
-  ETH-USD: Ethereum
-  SOL-USD: Solana
-  BNB-USD: BNB crypto
-  ADA-USD: Cardano
-  EURUSD=X: EUR/USD
-  GBPUSD=X: GBP/USD
-  USDJPY=X: USD/JPY
-  AUDUSD=X: AUD/USD
-  USDCAD=X: USD/CAD
+  AVGO: Broadcom
+  NFLX: Netflix
+  RELIANCE: Reliance Industries
+  HDFCBANK: HDFC Bank
+  ICICIBANK: ICICI Bank
+  INFY: Infosys
+  TCS: Tata Consultancy Services
+  SBIN: State Bank of India
+  BHARTIARTL: Bharti Airtel
+  LT: Larsen & Toubro
+  ITC: ITC Ltd
+  AXISBANK: Axis Bank
+  KOTAKBANK: Kotak Mahindra Bank
+  TATAMOTORS: Tata Motors
 
 # 1) KESTREL — market scanner
 kestrel:
   history: 2y
-  top_n: 5                     # candidates passed downstream
-  min_score: 25                # 0-100 opportunity score floor
-  allow_short: true
+  min_score: 25
 
 # 2) PRISM — chart technician
 prism:
   atr_stop_mult: 1.5
-  target_rr: 2.5               # target = entry + rr * risk
+  target_rr: 2.5
   sr_lookback: 20
 
 # 3) HERALD — news desk
@@ -54,33 +107,44 @@ herald:
   max_age_hours: 72
   google_news: true
 
-# 4) PULSE — crowd sentiment
+# 4) PULSE — crowd + derivatives positioning
 pulse:
   reddit: true
   stocktwits: true
-  hype_velocity: 3.0           # 24h mentions vs weekly daily avg
-  hype_extension_atr: 2.0      # price stretched > N ATR from EMA20
+  hype_velocity: 3.0
+  hype_extension_atr: 2.0
+  positioning_weight: 0.5      # share of PULSE score from PCR / funding / OI when available
 
 # 5) AEGIS — risk officer (veto power)
 aegis:
   risk_per_trade_pct: 1.0      # max loss per trade, % equity
-  max_position_pct: 20.0       # max notional per position, % equity
-  max_gross_pct: 150.0         # total gross exposure, % equity
-  max_class_pct: 60.0          # per asset class, % equity
-  max_positions: 8
+  max_position_pct: 20.0       # max notional (premium/margin for options) per position, % equity
+  max_gross_pct: 200.0
+  max_positions: 10
   max_correlation: 0.75
-  min_rr: 2.0
+  max_segment_pct:             # notional cap per segment, % equity
+    us_spot: 40
+    in_spot: 40
+    crypto_spot: 30
+    in_fno: 100
+    crypto_fut: 60
+    crypto_opt: 20
+  min_rr:                      # reward:risk needed, by structure
+    SPOT: 2.0
+    FUTURE: 2.0
+    LONG_OPTION: 2.0
+    DEBIT_SPREAD: 1.5
+    CREDIT_SPREAD: 0.10         # credit spreads must also pass POP + positive EV (realised vol)
 
 # 6) ARBITER — final decision
 arbiter:
   weights: {kestrel: 0.15, prism: 0.40, herald: 0.25, pulse: 0.20}
-  trade_threshold: 0.35        # composite score needed to TRADE
-  conflict_threshold: -0.30    # any desk below this vs direction => WAIT
+  trade_threshold: 0.35
+  conflict_threshold: -0.30
 
-# Optional local LLM (Ollama) to re-score headlines. Off = rule-based only.
 llm:
   enabled: false
   url: http://localhost:11434/api/generate
   model: llama3.1:8b
 
-http_timeout: 8
+http_timeout: 10

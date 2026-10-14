@@ -13,6 +13,10 @@ from datetime import datetime, timedelta, timezone
 
 import requests
 
+from .data import hist_vol
+from .derivs import nse_chain, delta_chain, synthetic_chain
+from .sources import NSE, Delta, fnum
+
 log = logging.getLogger("feeds")
 UA = {"User-Agent": "sentinel6/1.0 (personal research script)"}
 
@@ -41,13 +45,36 @@ class LiveFeeds:
         self.cfg = cfg
         self.timeout = cfg.get("http_timeout", 8)
         self.aliases = cfg.get("aliases", {})
+        self.nse = NSE(self.timeout)
+        self.delta = Delta(self.timeout)
+
+    # ------------------------------------------------------------ derivatives
+    def deriv(self, u, df) -> dict:
+        """Option chain / funding for derivative segments. {} for spot."""
+        seg = self.cfg["segments"].get(u.segment, {})
+        if u.segment == "in_fno":
+            if seg.get("instrument", "options") != "options":
+                return {}
+            ch = nse_chain(self.nse, u.symbol, u.is_index, seg.get("min_dte", 3), seg.get("max_dte", 45))
+            return {"chain": ch} if ch else {"error": "NSE option chain unavailable"}
+        if u.segment == "crypto_opt":
+            ch = delta_chain(self.delta, u.symbol, seg.get("min_dte", 2), seg.get("max_dte", 35))
+            return {"chain": ch} if ch else {"error": "Delta option chain unavailable"}
+        if u.segment == "crypto_fut":
+            fr = u.meta.get("funding")
+            if fr is None:
+                t = [x for x in self.delta.tickers("perpetual_futures") if x.get("symbol") == u.symbol]
+                fr = fnum(t[0].get("funding_rate")) if t else None
+            return {"funding": fr, "oi_usd": u.meta.get("oi_usd")}
+        return {}
 
     # ------------------------------------------------------------ news
-    def news(self, sym: str) -> list[Headline]:
+    def news(self, u) -> list[Headline]:
         items: list[Headline] = []
-        items += self._yf_news(sym)
+        if u.source == "yf" and u.segment != "in_fno":
+            items += self._yf_news(u.data_symbol)
         if self.cfg["herald"].get("google_news", True):
-            items += self._google_news(self.aliases.get(sym, sym))
+            items += self._google_news(u.name or u.symbol)
         seen, uniq = set(), []
         for h in items:
             k = h.title.lower()[:80]
@@ -103,16 +130,16 @@ class LiveFeeds:
         return out
 
     # ------------------------------------------------------------ crowd
-    def crowd(self, sym: str) -> list[Post]:
+    def crowd(self, u) -> list[Post]:
         posts: list[Post] = []
-        if self.cfg["pulse"].get("stocktwits", True):
-            posts += self._stocktwits(sym)
+        if self.cfg["pulse"].get("stocktwits", True) and u.segment in ("us_spot", "crypto_spot", "crypto_fut", "crypto_opt"):
+            st = u.symbol if u.segment == "us_spot" else (u.meta.get("und") or u.symbol.replace("USD", "")) + ".X"
+            posts += self._stocktwits(st)
         if self.cfg["pulse"].get("reddit", True):
-            posts += self._reddit(self.aliases.get(sym, sym))
+            posts += self._reddit(u.name or u.symbol)
         return posts
 
-    def _stocktwits(self, sym: str) -> list[Post]:
-        st = sym.replace("-USD", ".X").replace("=X", "").replace(".NS", ".NSE")
+    def _stocktwits(self, st: str) -> list[Post]:
         try:
             r = requests.get(f"https://api.stocktwits.com/api/2/streams/symbol/{st}.json",
                              headers=UA, timeout=self.timeout)
@@ -125,7 +152,7 @@ class LiveFeeds:
                 out.append(Post(m.get("body", ""), created, ent.get("basic")))
             return out
         except Exception as e:  # noqa
-            log.debug("stocktwits %s: %s", sym, e)
+            log.debug("stocktwits %s: %s", st, e)
             return []
 
     def _reddit(self, query: str) -> list[Post]:
@@ -163,22 +190,35 @@ class DemoFeeds:
     CROWD_BEAR = ["{n} is overvalued, shorting", "{n} dumping hard", "selling my {n}, looks weak"]
 
     def __init__(self, cfg: dict, seed: int = 11):
+        self.cfg = cfg
         self.aliases = cfg.get("aliases", {})
         self.seed = seed
 
     def _rng(self, sym):
         return random.Random(f"{self.seed}-{sym}")
 
-    def news(self, sym):
-        rng, n = self._rng(sym), self.aliases.get(sym, sym)
+    def deriv(self, u, df):
+        rng = self._rng(u.key + "d")
+        if u.segment in ("in_fno", "crypto_opt"):
+            crypto = u.segment == "crypto_opt"
+            ch = synthetic_chain(u, float(df["Close"].iloc[-1]), hist_vol(df, crypto=crypto), self.seed, crypto)
+            return {"chain": ch}
+        if u.segment == "crypto_fut":
+            return {"funding": rng.gauss(0.01, 0.03), "oi_usd": rng.uniform(1e6, 5e8)}
+        return {}
+
+    def news(self, u):
+        sym = u.key
+        rng, n = self._rng(sym), u.name or u.symbol
         bias = rng.choice([-1, 0, 1, 1])
         pool = (self.GOOD if bias > 0 else self.BAD if bias < 0 else self.NEUTRAL) + self.NEUTRAL
         srcs = ["Reuters", "Bloomberg", "CNBC", "Economic Times", "CoinDesk"]
         return [Headline(rng.choice(pool).format(n=n), rng.choice(srcs),
                          _now() - timedelta(hours=rng.uniform(1, 60))) for _ in range(rng.randint(3, 8))]
 
-    def crowd(self, sym):
-        rng, n = self._rng(sym + "c"), self.aliases.get(sym, sym)
+    def crowd(self, u):
+        sym = u.key
+        rng, n = self._rng(sym + "c"), u.name or u.symbol
         bull = rng.random()
         spike = rng.random() < 0.25
         posts = []

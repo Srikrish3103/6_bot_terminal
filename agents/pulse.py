@@ -21,10 +21,47 @@ class Pulse(Agent):
         self.vader = SentimentIntensityAnalyzer()
         self.vader.lexicon.update(SLANG)
 
-    def analyse(self, sym, posts, df):
+    @staticmethod
+    def positioning(deriv: dict, spot: float):
+        """Derivatives positioning score (-1..+1, bullish +) from option OI or perp funding."""
+        notes, parts, info = [], [], {}
+        ch = deriv.get("chain")
+        if ch is not None:
+            m = ch.metrics()
+            info.update(m)
+            if m["pcr"] is not None:
+                pcr = m["pcr"]
+                s = clip((pcr - 1.0) * 1.5)                 # put writers > call writers = support
+                if pcr > 1.6:
+                    s *= 0.4
+                    notes.append(f"PCR {pcr:.2f} extreme — contrarian risk")
+                parts.append(s)
+            if m["max_pain"]:
+                pull = (m["max_pain"] - spot) / spot
+                parts.append(clip(pull * 25) * (1.0 if m["dte"] <= 7 else 0.4))
+            if m["net_put_writing"]:
+                parts.append(clip(m["net_put_writing"] / max(1.0, sum(q.oi for q in ch.puts.values()) * 0.05)))
+        fr = deriv.get("funding")
+        if fr is not None:
+            fr = fr / 100                                   # Delta reports funding in % per 8h
+            info["funding"] = fr
+            parts.append(-clip(fr / 0.0005) * 0.8)          # crowded longs pay -> contrarian bearish
+            if abs(fr) >= 0.0005:
+                notes.append(f"Funding {fr * 100:+.3f}%/8h — crowded {'longs' if fr > 0 else 'shorts'}")
+        if not parts:
+            return None, info, notes
+        return clip(sum(parts) / len(parts)), info, notes
+
+    def analyse(self, sym, posts, df, deriv=None):
         pc = self.cfg["pulse"]
         now = datetime.now(timezone.utc)
+        pos_score, pos_info, pos_notes = self.positioning(deriv or {}, float(df["Close"].iloc[-1]))
         if len(posts) < 5:
+            if pos_score is not None:
+                v = "BULLISH" if pos_score > 0.15 else "BEARISH" if pos_score < -0.15 else "NEUTRAL"
+                return self.report(sym, pos_score, v, "MODERATE",
+                                   {"posts": len(posts), "positioning": pos_info, "pos_score": round(pos_score, 2)},
+                                   ["No social data — positioning only"] + pos_notes)
             return self.report(sym, 0, "QUIET", "LOW", {"posts": len(posts)},
                                ["Too little crowd data — ignored"])
 
@@ -56,9 +93,14 @@ class Pulse(Agent):
             contrarian = "CAUTION"
             notes.append("Crowd one-sided — popular ≠ correct")
             score *= 0.7
+        if pos_score is not None:
+            w = pc.get("positioning_weight", 0.5)
+            score = (1 - w) * score + w * pos_score
+            notes += pos_notes
         crowd = "BULLISH" if mood > 0.15 else "BEARISH" if mood < -0.15 else "NEUTRAL"
         conf = "HIGH" if len(posts) >= 40 and not hype else "LOW" if len(posts) < 15 else "MODERATE"
         return self.report(sym, clip(score), "HYPE" if hype else crowd, conf,
                            {"posts": len(posts), "tagged": tagged, "mood": round(mood, 2),
                             "velocity": round(velocity, 2), "extension_atr": round(ext, 2),
-                            "crowd": crowd, "contrarian": contrarian, "hype": hype}, notes)
+                            "crowd": crowd, "contrarian": contrarian, "hype": hype,
+                            "positioning": pos_info, "pos_score": None if pos_score is None else round(pos_score, 2)}, notes)

@@ -8,7 +8,6 @@ The main thread only renders.
 from __future__ import annotations
 
 import logging
-import random
 import threading
 import time
 from collections import deque
@@ -22,8 +21,9 @@ from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
 
-from .data import to_usd
+from .data import CCY_SIGN
 from .desk import Desk
+from .instruments import SEG_COLOR, SEG_LABEL
 from .view import html_report
 
 log = logging.getLogger("live")
@@ -46,7 +46,7 @@ class State:
         self.log = deque(maxlen=300)
         self.scan, self.results = [], []
         self.quotes: dict[str, dict] = {}       # sym -> px, prev, ref
-        self.positions, self.realized, self.start = [], 0.0, 0.0
+        self.positions, self.realized, self.start, self.base = [], 0.0, 0.0, "INR"
         self.cycles, self.last_cycle, self.next_cycle, self.next_tick = 0, None, 0.0, 0.0
         self.busy, self.demo = False, False
 
@@ -66,72 +66,33 @@ class Engine(threading.Thread):
         self.stop_flag = threading.Event()
 
     # ---------------------------------------------------------------- quotes
-    def _fetch_quotes(self, syms):
-        if self.demo:
-            out = {}
-            for s in syms:
-                q = self.st.quotes.get(s)
-                df = self.desk.data.get(s)
-                if df is None:
-                    continue
-                last = q["px"] if q else float(df["Close"].iloc[-1])
-                vol = float((df["High"] - df["Low"]).tail(14).mean() / df["Close"].iloc[-1]) / 6
-                out[s] = last * (1 + random.gauss(0, vol))
-            return out
-        import yfinance as yf
-        try:
-            raw = yf.download(syms, period="5d", interval="1m", group_by="ticker",
-                              auto_adjust=True, threads=True, progress=False)
-        except Exception as e:  # noqa
-            self.st.event("TICK", "error", f"quote refresh failed: {e}")
-            return {}
-        out = {}
-        for s in syms:
-            try:
-                c = raw[s]["Close"].dropna()
-                if len(c):
-                    out[s] = float(c.iloc[-1])
-            except Exception:  # noqa
-                pass
-        return out
-
     def tick(self):
         st, book = self.st, self.desk.book
         opens = book.open_positions()
-        syms = sorted({r["symbol"] for r in st.scan[:12]} | {p["symbol"] for p in opens})
-        if not syms:
+        keys = sorted({r["key"] for r in st.scan[:14]} | {p["key"] for p in opens})
+        if not keys:
             return
-        new = self._fetch_quotes(syms)
+        try:
+            new = self.desk.live_quotes(keys)
+        except Exception as e:  # noqa
+            st.event("TICK", "error", f"quote refresh failed: {e}")
+            return
         with st.lock:
-            for s, px in new.items():
-                q = st.quotes.get(s)
-                ref = q["ref"] if q else px
-                st.quotes[s] = {"px": px, "prev": q["px"] if q else px, "ref": ref, "t": time.time()}
-        # live stop / target exits
-        rates = self.desk.rates
-        for p in opens:
-            px = new.get(p["symbol"])
-            if px is None:
-                continue
-            long_ = p["side"] == "LONG"
-            hit = ("STOP", p["stop"]) if (px <= p["stop"] if long_ else px >= p["stop"]) else \
-                  ("TARGET", p["target"]) if (px >= p["target"] if long_ else px <= p["target"]) else None
-            if hit:
-                pnl = book.close(p, hit[1], hit[0], rates)
-                st.event("BOOK", "trade", f"CLOSED {p['side']} {p['symbol']} at {hit[0]} {fp(hit[1])} → P&L ${pnl:+,.0f}")
+            for k, px in new.items():
+                q = st.quotes.get(k)
+                st.quotes[k] = {"px": px, "prev": q["px"] if q else px, "ref": q["ref"] if q else px, "t": time.time()}
+        for p, why, pnl in book.check_exits(new, self.desk.rates):
+            st.event("BOOK", "trade", f"CLOSED {p['name']} {p['label']} at {why} → P&L {st.base} {pnl:+,.0f}")
         self._refresh_book()
 
     def _refresh_book(self):
-        st, book, rates = self.st, self.desk.book, self.desk.rates
-        rows = []
-        for p in book.open_positions():
-            q = st.quotes.get(p["symbol"])
-            df = self.desk.data.get(p["symbol"])
-            px = q["px"] if q else (float(df["Close"].iloc[-1]) if df is not None else p["entry"])
-            d = 1 if p["side"] == "LONG" else -1
-            rows.append({**p, "last": px, "upnl": to_usd((px - p["entry"]) * d * p["qty"], p["symbol"], rates or {"USD": 1})})
+        st = self.st
+        prices = self.desk.last_prices()
         with st.lock:
-            st.positions, st.realized, st.start = rows, book.realized(), book.start
+            prices.update({k: q["px"] for k, q in st.quotes.items()})
+        snap = self.desk.book.snapshot(prices, self.desk.rates)
+        with st.lock:
+            st.positions, st.realized, st.start, st.base = snap["positions"], snap["realized"], snap["start"], snap["base"]
 
     # ---------------------------------------------------------------- cycle
     def do_cycle(self):
@@ -143,7 +104,7 @@ class Engine(threading.Thread):
             with st.lock:
                 st.scan, st.results = run["scan"], run["results"]
                 for r in run["scan"]:
-                    st.quotes[r["symbol"]] = {"px": r["price"], "prev": r["price"], "ref": r["price"], "t": time.time()}
+                    st.quotes[r["key"]] = {"px": r["price"], "prev": r["price"], "ref": r["price"], "t": time.time()}
                 st.cycles += 1
                 st.last_cycle = datetime.now()
             self._refresh_book()
@@ -182,7 +143,8 @@ def _mmss(sec):
 def render(st: State) -> Layout:
     now = time.time()
     with st.lock:
-        unreal = sum(p["upnl"] for p in st.positions)
+        cur = CCY_SIGN.get(st.base, st.base)
+        unreal = sum(p["upnl_base"] for p in st.positions)
         equity = st.start + st.realized + unreal
         pct = (equity / st.start - 1) * 100 if st.start else 0
 
@@ -194,7 +156,7 @@ def render(st: State) -> Layout:
             ("│ ", "#26305c"),
             ("CYCLE RUNNING " if st.busy else f"cycle #{st.cycles} · next in {_mmss(st.next_cycle - now)} ", "#ffd23d"),
             ("│ ", "#26305c"), (f"quotes in {_mmss(st.next_tick - now)} ", "#8d96c4"), ("│ ", "#26305c"),
-            ("Equity ", "#8d96c4"), (f"${equity:,.0f} ", "bold #ffffff"),
+            ("Equity ", "#8d96c4"), (f"{cur}{equity:,.0f} ", "bold #ffffff"),
             (f"({pct:+.2f}%) ", "#4dff8a" if pct >= 0 else "#ff5b5b"),
             ("│ DEMO DATA" if st.demo else "│ PAPER ONLY", "#ff9a1f"))
 
@@ -221,18 +183,19 @@ def render(st: State) -> Layout:
 
         # watchlist
         wt = Table(expand=True, box=None, header_style="bold #8d96c4", pad_edge=False)
-        for col, j in (("#", "right"), ("Symbol", "left"), ("Class", "left"), ("Live", "right"), ("", "left"),
+        for col, j in (("#", "right"), ("Seg", "left"), ("Symbol", "left"), ("Live", "right"), ("", "left"),
                        ("vs scan", "right"), ("Dir", "left"), ("Score", "right")):
             wt.add_column(col, justify=j, no_wrap=True)
-        for i, r in enumerate(st.scan[:12], 1):
-            q = st.quotes.get(r["symbol"], {"px": r["price"], "prev": r["price"], "ref": r["price"], "t": 0})
+        for i, r in enumerate(st.scan[:14], 1):
+            q = st.quotes.get(r["key"], {"px": r["price"], "prev": r["price"], "ref": r["price"], "t": 0})
             up = q["px"] > q["prev"]
             dn = q["px"] < q["prev"]
             fresh = now - q.get("t", 0) < 1.5
             arrow = ("▲", "#4dff8a") if up else ("▼", "#ff5b5b") if dn else ("•", "#5a6390")
             chg = q["px"] / q["ref"] - 1 if q["ref"] else 0
             px_style = ("bold black on #4dff8a" if up else "bold white on #c0392b") if fresh and (up or dn) else "#e8ecff"
-            wt.add_row(str(i), f"[bold]{r['symbol']}", f"[#8d96c4]{r['class']}", Text(fp(q["px"]), style=px_style),
+            wt.add_row(str(i), Text(SEG_LABEL[r["segment"]], style=SEG_COLOR[r["segment"]]), f"[bold]{r['symbol']}",
+                       Text(fp(q["px"]), style=px_style),
                        Text(arrow[0], style=arrow[1]), Text(f"{chg:+.2%}", style="#4dff8a" if chg >= 0 else "#ff5b5b"),
                        Text(r["direction"], style="#4dff8a" if r["direction"] == "LONG" else "#ff5b5b"),
                        f"[bold #4fb3ff]{r['score']}")
@@ -241,14 +204,19 @@ def render(st: State) -> Layout:
 
         # decisions
         dt = Table(expand=True, box=None, header_style="bold #8d96c4", pad_edge=False)
-        for col in ("Symbol", "Dir", "PRISM", "HERALD", "PULSE", "AEGIS", "ARBITER", "Why"):
-            dt.add_column(col, no_wrap=col != "Why", overflow="ellipsis")
+        for col in ("Seg", "Symbol", "Dir", "P/H/Pu", "Structure", "AEGIS", "ARBITER", "Why"):
+            dt.add_column(col, no_wrap=col not in ("Why", "Structure"), overflow="ellipsis")
         for res in st.results:
             r = res["reports"]
             a = r["arbiter"]
             sc = lambda k: Text(f"{r[k]['score']:+.2f}", style="#4dff8a" if r[k]["score"] > 0 else "#ff5b5b" if r[k]["score"] < 0 else "#8d96c4")  # noqa
-            dt.add_row(f"[bold]{res['symbol']}", res["direction"], sc("prism"), sc("herald"), sc("pulse"),
-                       Text("PASS" if r["aegis"]["verdict"] == "APPROVED" else "VETO",
+            stc = res.get("structure")
+            phu = Text.assemble(sc("prism"), " ", sc("herald"), " ", sc("pulse"))
+            units = r["aegis"]["details"].get("units") or 0
+            dt.add_row(Text(SEG_LABEL[res["segment"]], style=SEG_COLOR[res["segment"]]), f"[bold]{res['symbol']}",
+                       res["direction"], phu,
+                       Text(f"{stc['name']} {stc['label']}" if stc else "none", style="#e8ecff" if stc else "#ff5b5b"),
+                       Text(("PASS" if r["aegis"]["verdict"] == "APPROVED" else "VETO") + (f" ×{units:,.4g}" if units else ""),
                             style="#4dff8a" if r["aegis"]["verdict"] == "APPROVED" else "#ff5b5b"),
                        Text(a["verdict"], style=DEC.get(a["verdict"], "")), Text(a["details"]["reason"], style="#8d96c4"))
         decisions = Panel(dt if st.results else Text("Waiting for first cycle…", style="#5a6390"),
@@ -256,17 +224,18 @@ def render(st: State) -> Layout:
 
         # book
         bt = Table(expand=True, box=None, header_style="bold #8d96c4", pad_edge=False)
-        for col, j in (("Symbol", "left"), ("Side", "left"), ("Entry", "right"), ("Live", "right"),
-                       ("to Stop", "right"), ("to Tgt", "right"), ("uPnL $", "right")):
-            bt.add_column(col, justify=j, no_wrap=True)
+        for col, j in (("Seg", "left"), ("Position", "left"), ("×", "right"), ("Und", "right"),
+                       ("to Stop", "right"), ("to Tgt", "right"), (f"uPnL {cur}", "right")):
+            bt.add_column(col, justify=j, no_wrap=col != "Position", overflow="ellipsis")
         for p in st.positions:
-            ds = abs(p["last"] - p["stop"]) / p["last"]
-            dtg = abs(p["target"] - p["last"]) / p["last"]
-            bt.add_row(f"[bold]{p['symbol']}", Text(p["side"], style="#4dff8a" if p["side"] == "LONG" else "#ff5b5b"),
-                       fp(p["entry"]), fp(p["last"]), Text(f"{ds:.1%}", style="#ff9a1f" if ds < 0.02 else "#8d96c4"),
-                       f"{dtg:.1%}", Text(f"{p['upnl']:+,.0f}", style="bold #4dff8a" if p["upnl"] >= 0 else "bold #ff5b5b"))
-        book = Panel(Group(Text.assemble(("Realized ", "#8d96c4"), (f"${st.realized:+,.0f}   ", "bold"),
-                                         ("Open ", "#8d96c4"), (f"${unreal:+,.0f}", "bold #4dff8a" if unreal >= 0 else "bold #ff5b5b")),
+            ds = abs(p["last"] - p["und_stop"]) / p["last"]
+            dtg = abs(p["und_target"] - p["last"]) / p["last"]
+            bt.add_row(Text(SEG_LABEL[p["segment"]], style=SEG_COLOR[p["segment"]]),
+                       Text(f"{p['name']} {p['label']}", style="#4dff8a" if p["direction"] == "LONG" else "#ff5b5b"),
+                       f"{p['units']:,.4g}", fp(p["last"]), Text(f"{ds:.1%}", style="#ff9a1f" if ds < 0.02 else "#8d96c4"),
+                       f"{dtg:.1%}", Text(f"{p['upnl_base']:+,.0f}", style="bold #4dff8a" if p["upnl_base"] >= 0 else "bold #ff5b5b"))
+        book = Panel(Group(Text.assemble(("Realized ", "#8d96c4"), (f"{cur}{st.realized:+,.0f}   ", "bold"),
+                                         ("Open ", "#8d96c4"), (f"{cur}{unreal:+,.0f}", "bold #4dff8a" if unreal >= 0 else "bold #ff5b5b")),
                            bt if st.positions else Text("No open positions", style="#5a6390")),
                      title="[bold #4dff8a]PAPER BOOK", border_style="#26305c")
 
