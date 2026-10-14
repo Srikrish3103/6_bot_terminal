@@ -7,19 +7,22 @@ from .data import CCY_SIGN
 from .instruments import SEGMENTS
 
 STAGES = [
-    ("universe", "Universe", "Every instrument the desk watches"),
-    ("data", "Has data", "Price history downloaded"),
+    ("listed", "Listed", "Every instrument on the exchange"),
+    ("universe", "Liquid", "Passed the daily liquidity pre-screen"),
+    ("data", "Has 2y data", "Enough history to analyse"),
     ("scored", "Scored ≥ min", "KESTREL score above the floor"),
     ("shortlist", "Shortlisted", "Top picks per segment"),
     ("setup", "Chart setup", "PRISM confirmed a SETUP"),
     ("agree", "News & crowd agree", "HERALD / PULSE not against the trade"),
     ("approved", "Risk approved", "AEGIS sized it and passed all checks"),
-    ("trade", "TRADE", "ARBITER consensus — suggested trades"),
+    ("trade", "TRADE / HOLD", "ARBITER consensus — suggested or already held"),
 ]
 
 
-def funnel(universe, data, scan_rows, results, min_score, conflict_thr):
+def funnel(stats, universe, data, scan_rows, results, min_score, conflict_thr):
     segs = {s: {k: 0 for k, _, _ in STAGES} for s in SEGMENTS}
+    for s, st in (stats or {}).items():
+        segs[s]["listed"] = st.get("listed", 0)
     for u in universe:
         segs[u.segment]["universe"] += 1
         if u.key in data:
@@ -37,14 +40,14 @@ def funnel(universe, data, scan_rows, results, min_score, conflict_thr):
         if any(al.get(k, 0) < conflict_thr and rep[k]["confidence"] != "LOW" for k in ("herald", "pulse")):
             continue
         s["agree"] += 1
-        if rep["aegis"]["verdict"] != "APPROVED":
+        if rep["aegis"]["verdict"] != "APPROVED" and not rep["aegis"]["details"].get("already_holding"):
             continue
         s["approved"] += 1
-        if rep["arbiter"]["verdict"] == "TRADE":
+        if rep["arbiter"]["verdict"] in ("TRADE", "HOLD"):
             s["trade"] += 1
     total = {k: sum(segs[s][k] for s in SEGMENTS) for k, _, _ in STAGES}
     return {"stages": [{"key": k, "label": l, "help": h, "count": total[k]} for k, l, h in STAGES],
-            "by_segment": {s: segs[s] for s in SEGMENTS if segs[s]["universe"]}}
+            "by_segment": {s: segs[s] for s in SEGMENTS if segs[s]["listed"] or segs[s]["universe"]}}
 
 
 def _px(x, ccy):

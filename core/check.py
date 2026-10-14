@@ -8,7 +8,7 @@ from rich.table import Table
 from .derivs import nse_chain, delta_chain
 from .feeds import LiveFeeds
 from .instruments import Underlying
-from .sources import NSE, Delta, fnum
+from .sources import NSE, Binance, Delta, fnum, nse_equity_symbols, us_symbols
 
 
 def run_check(cfg, con):
@@ -35,6 +35,21 @@ def run_check(cfg, con):
             except Exception:  # noqa
                 last[s] = None
         return all(v is not None for v in last.values()), last
+
+    def us_list():
+        n = us_symbols(False, cfg["http_timeout"])
+        return len(n) > 3000, f"{len(n):,} US common stocks (NYSE/Nasdaq/AMEX) · e.g. {', '.join(list(n)[:5])}"
+
+    def in_list():
+        n = nse_equity_symbols(cfg["http_timeout"])
+        return len(n) > 1000, f"{len(n):,} NSE EQ stocks · e.g. {', '.join(list(n)[:5])}"
+
+    def binance():
+        bn = Binance(cfg["http_timeout"])
+        p = bn.usdt_pairs()
+        liq = sum(1 for v in p.values() if v["quote_volume"] >= cfg["segments"]["crypto_spot"].get("min_adv", 0))
+        k = bn.klines("BTCUSDT", 5)
+        return bool(p) and k is not None, f"{len(p)} USDT pairs, {liq} liquid · BTC last {k['Close'].iloc[-1] if k is not None else '-'}"
 
     nse = NSE(cfg["http_timeout"])
 
@@ -90,6 +105,9 @@ def run_check(cfg, con):
 
     with con.status("Checking sources…"):
         row("yfinance (US / IN / crypto spot, indices, USDINR)", yf_spot)
+        row("US symbol list (NASDAQ Trader)", us_list)
+        row("NSE equity list (EQUITY_L)", in_list)
+        row("Binance spot (crypto universe)", binance)
         row("NSE F&O lot sizes", nse_lots)
         row("NSE option chain · NIFTY", nse_idx)
         row("NSE option chain · RELIANCE", nse_stk)

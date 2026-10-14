@@ -2,18 +2,22 @@
 
 Six agents scan six market segments every cycle and paper-trade the results. Nothing is ever sent to a broker or exchange.
 
-## Segments
+## Segments — full markets
 
-| Seg | Market | Data source | Paper instrument |
-|---|---|---|---|
-| `US` | US stocks (spot) | yfinance | Shares (fractional) |
-| `IN` | NSE stocks (spot) | yfinance | Shares (whole) |
-| `CRYPTO` | Crypto spot | yfinance | Coins (fractional) |
-| `F&O` | **Full NSE F&O list** + NIFTY / BANKNIFTY / FINNIFTY / MIDCPNIFTY / NIFTYNXT50 | yfinance candles · NSE lot file + option chain | Options (futures if no chain) |
-| `C-FUT` | Crypto perpetuals — top 40 by turnover | Delta Exchange India | Perpetual contracts |
-| `C-OPT` | BTC / ETH options | Delta Exchange India | Options |
+Every segment scans its **complete** exchange list. Once a day (`universe_refresh_hours`) the desk downloads every symbol, applies a liquidity pre-screen, and caches 2 years of history for the survivors in `data/cache/`. Each 15-minute cycle then only refreshes the latest bars.
 
-Spot segments are long-only (no overnight cash shorting). Derivative segments can go short.
+| Seg | Full list from | ~Listed | Daily liquidity pre-screen (config) | Paper instrument |
+|---|---|---|---|---|
+| `US` | NASDAQ Trader symbol files — NYSE, Nasdaq, AMEX common stocks (no ETFs, warrants, units, preferreds) | 6,000+ | price ≥ $5 and 20-day avg traded value ≥ $20M | Shares (fractional) |
+| `IN` | NSE `EQUITY_L.csv`, EQ series | ~2,100 | price ≥ ₹20 and avg traded value ≥ ₹10 cr | Shares (whole) |
+| `CRYPTO` | Binance spot — every USDT pair (stablecoins, wrapped & leveraged tokens removed) | ~400 | 24h volume ≥ $5M | Coins (fractional) |
+| `F&O` | NSE `fo_mktlots.csv` — every F&O stock + NIFTY / BANKNIFTY / FINNIFTY / MIDCPNIFTY / NIFTYNXT50 | ~210 | none | Options (futures if no chain) |
+| `C-FUT` | Delta Exchange India — every perpetual | all | 24h turnover ≥ $1M | Perpetual contracts |
+| `C-OPT` | Delta Exchange India — every option underlying | all | ≥ 10 listed strikes | Options |
+
+Set `universe: list` on any segment to scan only its `symbols:` instead. Spot segments are long-only; derivative segments can go short.
+
+**Timing on a home connection (live data):** the daily rebuild takes roughly 10–20 min (mostly the 6,000-name US pre-screen); the dashboard shows progress in the KESTREL card. After that, each cycle refreshes ~2,500–3,500 instruments in about 1–3 min.
 
 ## Agents
 
@@ -90,8 +94,9 @@ Filter the cards by segment with the tabs (US / IN / CRYPTO / F&O / C-FUT / C-OP
 ## Files
 ```
 agents/            kestrel, prism, herald, pulse, aegis, arbiter
-core/instruments.py  universe per segment, F&O lot sizes, Delta perps
-core/sources.py      NSE + Delta Exchange India HTTP clients
+core/instruments.py  instrument model, segment labels, fallback lists
+core/universe.py     full symbol lists, liquidity pre-screen, cached history + per-cycle refresh
+core/sources.py      NSE, Delta India, Binance, NASDAQ Trader clients
 core/derivs.py       option chains, PCR/max pain, Black-Scholes, structurer
 core/data.py         candles (yfinance + Delta), FX to base currency
 core/feeds.py        news, crowd, derivatives feeds (+ offline demo)

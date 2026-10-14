@@ -15,16 +15,25 @@ from agents.herald import Herald
 from agents.pulse import Pulse
 from agents.aegis import Aegis
 from agents.arbiter import Arbiter
-from .data import fetch_candles, synthetic_candles, fx_rates, hist_vol, FX_FALLBACK
+from .data import fx_rates, hist_vol, FX_FALLBACK
 from .derivs import option_structure, linear_structure
 from .feeds import LiveFeeds, DemoFeeds
-from .instruments import build_universe
+from .universe import MarketData
 from .paper import PaperBook
 from .sources import Delta, fnum
 from .suggest import action, funnel
 
 log = logging.getLogger("desk")
 SPOT = ("us_spot", "in_spot", "crypto_spot")
+
+
+def _top_per_segment(rows, n):
+    out, cnt = [], {}
+    for r in rows:                       # rows are already sorted by score
+        if cnt.get(r["segment"], 0) < n:
+            cnt[r["segment"]] = cnt.get(r["segment"], 0) + 1
+            out.append(r)
+    return out
 
 
 class Desk:
@@ -38,6 +47,8 @@ class Desk:
         db = root / "data" / ("paper_demo_v2.db" if demo else "paper_v2.db")
         self.book = PaperBook(db, cfg["account"]["starting_equity"], self.base)
         self.universe, self.umap, self.data, self.rates = [], {}, {}, dict(FX_FALLBACK)
+        self.market = MarketData(cfg, root, demo)
+        self.stats = {}
 
     # ------------------------------------------------------------------ helpers
     def last_prices(self):
@@ -105,6 +116,14 @@ class Desk:
                         pass
             except Exception as e:  # noqa
                 log.debug("yf quotes: %s", e)
+        bn = {k for k in keys if k in self.umap and self.umap[k].source == "binance"}
+        if bn:
+            from .sources import Binance
+            pr = Binance(self.cfg["http_timeout"]).prices()
+            for k in bn:
+                v = pr.get(self.umap[k].data_symbol)
+                if v:
+                    out[k] = v
         if dl:
             marks = {t.get("symbol"): fnum(t.get("mark_price")) for t in
                      Delta(self.cfg["http_timeout"]).tickers("perpetual_futures")}
@@ -125,12 +144,9 @@ class Desk:
                 time.sleep(pace)
 
         t0 = datetime.now()
-        step("KESTREL", "Building universe (spot · F&O · crypto derivs)…")
-        self.universe = build_universe(self.cfg, self.root, self.demo)
+        step("KESTREL", "Loading full-market universe…")
+        self.universe, data, self.stats = self.market.load(emit)
         self.umap = {u.key: u for u in self.universe}
-        step("KESTREL", f"Downloading {len(self.universe)} markets…")
-        data = synthetic_candles(self.universe) if self.demo else fetch_candles(
-            self.universe, self.cfg["kestrel"]["history"], self.cfg["http_timeout"])
         if not data:
             emit("KESTREL", "error", "No market data")
             raise RuntimeError("No market data — check internet / yfinance / Delta")
@@ -212,9 +228,9 @@ class Desk:
             emit(a, "idle", "")
         for res in results:
             res["action"] = action(res, self.base, self.rates)
-        fun = funnel(self.universe, data, scan_rows, results, self.cfg["kestrel"]["min_score"],
+        fun = funnel(self.stats, self.universe, data, scan_rows, results, self.cfg["kestrel"]["min_score"],
                      self.cfg["arbiter"]["conflict_threshold"])
         return {"ts": t0.isoformat(timespec="seconds"), "demo": self.demo, "base": self.base, "funnel": fun,
                 "secs": round((datetime.now() - t0).total_seconds(), 1),
-                "scanned": len(scan_rows), "scan": scan_rows[:30], "results": results,
+                "scanned": len(scan_rows), "scan": _top_per_segment(scan_rows, 40), "results": results,
                 "book": self.book.snapshot(prices, self.rates), "closed": self.book.closed_positions(10)}

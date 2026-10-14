@@ -140,7 +140,7 @@ footer{color:var(--dim);font-size:12px;text-align:center;margin:26px 0 10px}
 
   <section>
     <h2>How the market was funnelled<span class="count" id="ftitle"></span></h2>
-    <div class="help">Each cycle every instrument goes through the six agents. Bars show how many survive each stage.</div>
+    <div class="help">Every listed instrument is liquidity-screened once a day; the survivors go through the six agents every cycle. Bars use a log scale.</div>
     <div class="fgrid">
       <div class="panel fun" id="funnel"><div class="empty">First cycle running…</div></div>
       <div class="panel" style="overflow-x:auto"><table class="heat" id="segfun"></table></div>
@@ -229,20 +229,20 @@ function render(){
 function renderFunnel(){
   const f = S.funnel; if (!f) return;
   const max = Math.max(1, f.stages[0].count);
-  document.getElementById("ftitle").textContent = ` · ${f.stages[0].count} → ${f.stages[f.stages.length-1].count}`;
+  document.getElementById("ftitle").textContent = ` · ${num(f.stages[0].count,0)} → ${f.stages[f.stages.length-1].count}`;
   document.getElementById("funnel").innerHTML = f.stages.map((s, i) => {
-    const w = Math.max(2, 100 * s.count / max);
+    const w = s.count ? Math.max(2, 100 * Math.log10(s.count + 1) / Math.log10(max + 1)) : 0;
     const drop = i ? f.stages[i-1].count - s.count : 0;
     return `<div class="frow ${i===f.stages.length-1?"last":""}"><div class="lab">${esc(s.label)}<small>${esc(s.help)}</small></div>
-      <div class="fbar" title="${drop?drop+" dropped":""}"><span style="width:${w}%"></span></div><div class="num">${s.count}</div></div>`;}).join("");
+      <div class="fbar" title="${drop?num(drop,0)+" dropped":""}"><span style="width:${w}%"></span></div><div class="num">${num(s.count,0)}</div></div>`;}).join("");
   const keys = f.stages.map(s => s.key);
-  const short = {universe:"Univ",data:"Data",scored:"Score",shortlist:"Short",setup:"Setup",agree:"Agree",approved:"Risk",trade:"Trade"};
+  const short = {listed:"Listed",universe:"Liquid",data:"Data",scored:"Score",shortlist:"Short",setup:"Setup",agree:"Agree",approved:"Risk",trade:"Trade"};
   let h = `<tr><th class="l">Segment</th>${keys.map(k=>`<th>${short[k]}</th>`).join("")}</tr>`;
   for (const [sg, c] of Object.entries(f.by_segment)) {
     h += `<tr><td>${segBadge(sg)}</td>${keys.map(k => {
-      const v = c[k], a = c.universe ? v / c.universe : 0;
+      const v = c[k], a = c.listed ? Math.sqrt(v / c.listed) : 0;
       const bg = k === "trade" && v ? "rgba(61,220,132,.25)" : `rgba(79,179,255,${(0.05 + 0.35*a).toFixed(2)})`;
-      return `<td style="background:${bg}">${v}</td>`;}).join("")}</tr>`;
+      return `<td style="background:${bg}">${num(v,0)}</td>`;}).join("")}</tr>`;
   }
   document.getElementById("segfun").innerHTML = h;
 }
@@ -293,7 +293,7 @@ function card(r){
 
 function renderCards(){
   const res = S.results || [];
-  const segsIn = [...new Set(res.map(r => r.segment))];
+  const segsIn = S.funnel ? Object.keys(S.funnel.by_segment) : [...new Set(res.map(r => r.segment))];
   const tabs = [["all","All"]].concat(segsIn.map(k => [k, S.segments[k].label]));
   document.getElementById("tabs").innerHTML = tabs.map(([k,l]) => {
     const n = k==="all" ? res.length : res.filter(r=>r.segment===k).length;
@@ -312,8 +312,8 @@ function renderCards(){
 }
 
 function renderScan(){
-  const rows = S.scan || [];
-  document.getElementById("nscan").textContent = S.scanned ? ` · top ${rows.length} of ${S.scanned}` : "";
+  const rows = (S.scan || []).filter(r => seg === "all" || r.segment === seg).slice(0, 40);
+  document.getElementById("nscan").textContent = S.scanned ? ` · top ${rows.length} of ${num(S.scanned,0)} scanned${seg!=="all"?" · "+S.segments[seg].label:""}` : "";
   let h = `<tr><th class="l">#</th><th class="l">Seg</th><th class="l">Symbol</th><th>Live</th><th>vs scan</th><th>1D</th><th>20D</th><th class="l">Bias</th><th>Score</th></tr>`;
   rows.forEach((r, i) => {
     const old = prevPx[r.key]; let fl = "";

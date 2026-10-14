@@ -2,64 +2,15 @@
 from __future__ import annotations
 
 import logging
-from concurrent.futures import ThreadPoolExecutor
 
 import numpy as np
 import pandas as pd
 
-from .sources import Delta
 
 log = logging.getLogger("data")
 
 FX_FALLBACK = {"USD": 1.0, "INR": 88.0}       # units per 1 USD
 CCY_SIGN = {"INR": "₹", "USD": "$"}
-
-
-def fetch_candles(universe, period="2y", timeout=10) -> dict[str, pd.DataFrame]:
-    out: dict[str, pd.DataFrame] = {}
-    yf_items = [u for u in universe if u.source == "yf"]
-    dl_items = [u for u in universe if u.source == "delta"]
-
-    if yf_items:
-        import yfinance as yf
-        syms = sorted({u.data_symbol for u in yf_items})
-        try:
-            raw = yf.download(syms, period=period, interval="1d", group_by="ticker",
-                              auto_adjust=True, threads=True, progress=False)
-        except Exception as e:  # noqa
-            log.error("yfinance download failed: %s", e)
-            raw = None
-        if raw is not None and len(raw):
-            for u in yf_items:
-                try:
-                    df = raw[u.data_symbol] if isinstance(raw.columns, pd.MultiIndex) else raw
-                    df = _clean(df)
-                    if df is not None:
-                        out[u.key] = df
-                except Exception:  # noqa
-                    pass
-
-    if dl_items:
-        d = Delta(timeout)
-        syms = sorted({u.data_symbol for u in dl_items})
-        with ThreadPoolExecutor(max_workers=6) as ex:
-            res = dict(zip(syms, ex.map(d.candles, syms)))
-        for u in dl_items:
-            df = _clean(res.get(u.data_symbol))
-            if df is not None:
-                out[u.key] = df
-    missing = len(universe) - len(out)
-    if missing:
-        log.info("%d underlyings had no/short data and were skipped", missing)
-    return out
-
-
-def _clean(df):
-    if df is None or len(df) == 0:
-        return None
-    df = df[["Open", "High", "Low", "Close", "Volume"]].dropna(subset=["Close"]).copy()
-    df["Volume"] = df["Volume"].fillna(0)
-    return df if len(df) >= 120 else None
 
 
 def fx_rates(live: bool = True) -> dict[str, float]:

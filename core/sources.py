@@ -8,6 +8,7 @@ from __future__ import annotations
 import csv
 import io
 import logging
+import re
 import time
 from datetime import datetime, timedelta, timezone
 
@@ -188,3 +189,104 @@ def now_utc():
 
 def days_to(exp: datetime) -> float:
     return (exp - now_utc()) / timedelta(days=1)
+
+
+# ====================================================================== full symbol lists
+NASDAQ_FILES = ["https://www.nasdaqtrader.com/dynamic/SymDir/nasdaqlisted.txt",
+                "https://www.nasdaqtrader.com/dynamic/SymDir/otherlisted.txt"]
+_BAD_NAME = re.compile(r"\b(warrants?|rights?|units?|preferred|debentures?|notes due|subordinated|"
+                       r"depositary shares? representing|beneficial interests?|acquisition corp)\b|\d%", re.I)
+
+
+def us_symbols(include_etfs=False, timeout=15) -> dict[str, str]:
+    """{yfinance symbol: company name} for every NYSE / Nasdaq / AMEX common stock (+ETFs if asked)."""
+    out = {}
+    for url in NASDAQ_FILES:
+        try:
+            r = requests.get(url, timeout=timeout, headers={"User-Agent": BROWSER_UA})
+            lines = [l for l in r.text.splitlines() if l and not l.startswith("File Creation Time")]
+            hdr = lines[0].split("|")
+            for line in lines[1:]:
+                row = dict(zip(hdr, line.split("|")))
+                sym = row.get("Symbol") or row.get("ACT Symbol") or ""
+                name = row.get("Security Name", "")
+                if not sym or row.get("Test Issue") == "Y":
+                    continue
+                if row.get("ETF") == "Y" and not include_etfs:
+                    continue
+                if any(c in sym for c in "$^+=") or _BAD_NAME.search(name):
+                    continue
+                if row.get("Financial Status", "N") not in ("N", "", None):
+                    continue           # deficient / delinquent / bankrupt
+                out[sym.replace(".", "-")] = name.split(" - ")[0].strip()
+        except Exception as e:  # noqa
+            log.warning("US symbol file %s failed: %s", url, e)
+    return out
+
+
+def nse_equity_symbols(timeout=15) -> dict[str, str]:
+    """{SYMBOL: company} for every NSE EQ-series stock."""
+    for url in ("https://nsearchives.nseindia.com/content/equities/EQUITY_L.csv",
+                "https://archives.nseindia.com/content/equities/EQUITY_L.csv"):
+        try:
+            r = requests.get(url, timeout=timeout, headers={"User-Agent": BROWSER_UA})
+            if r.status_code != 200:
+                continue
+            out = {}
+            rd = csv.reader(io.StringIO(r.text))
+            hdr = [h.strip().upper() for h in next(rd)]
+            for row in rd:
+                d = dict(zip(hdr, [c.strip() for c in row]))
+                if d.get("SERIES") == "EQ" and d.get("SYMBOL"):
+                    out[d["SYMBOL"]] = d.get("NAME OF COMPANY", d["SYMBOL"])
+            if out:
+                return out
+        except Exception as e:  # noqa
+            log.debug("NSE equity list %s: %s", url, e)
+    return {}
+
+
+class Binance:
+    """Public market data mirror (no key, no geo-restriction)."""
+    BASES = ["https://data-api.binance.vision/api/v3", "https://api.binance.com/api/v3"]
+    STABLE = {"USDC", "FDUSD", "TUSD", "USDP", "DAI", "BUSD", "EUR", "AEUR", "USD1", "PYUSD", "EURI", "XUSD",
+              "USDE", "BFUSD", "RLUSD", "USDS", "GBP", "TRY", "BRL", "WBTC", "WBETH", "BETH", "PAXG"}
+
+    def __init__(self, timeout=10):
+        self.timeout = timeout
+        self.s = requests.Session()
+
+    def _get(self, path, params=None):
+        for b in self.BASES:
+            try:
+                r = self.s.get(b + path, params=params, timeout=self.timeout)
+                if r.status_code == 200:
+                    return r.json()
+            except Exception as e:  # noqa
+                log.debug("Binance %s%s: %s", b, path, e)
+        return None
+
+    def usdt_pairs(self) -> dict[str, dict]:
+        """{BASE: {symbol, quote_volume, last}} for every trading spot USDT pair."""
+        info = self._get("/exchangeInfo", {"permissions": "SPOT"}) or {}
+        ok = {s["symbol"]: s["baseAsset"] for s in info.get("symbols", [])
+              if s.get("quoteAsset") == "USDT" and s.get("status") == "TRADING"}
+        out = {}
+        for t in self._get("/ticker/24hr") or []:
+            sym = t.get("symbol")
+            base = ok.get(sym)
+            if not base or base in self.STABLE or base.endswith(("UP", "DOWN", "BULL", "BEAR")):
+                continue
+            out[base] = {"symbol": sym, "quote_volume": fnum(t.get("quoteVolume")), "last": fnum(t.get("lastPrice"))}
+        return out
+
+    def klines(self, symbol, limit=500) -> pd.DataFrame | None:
+        k = self._get("/klines", {"symbol": symbol, "interval": "1d", "limit": limit})
+        if not k:
+            return None
+        df = pd.DataFrame(k, columns=["t", "Open", "High", "Low", "Close", "Volume", "ct", "qv", "n", "tb", "tq", "x"])
+        df.index = pd.to_datetime(df["t"], unit="ms")
+        return df[["Open", "High", "Low", "Close", "Volume"]].astype(float)
+
+    def prices(self) -> dict[str, float]:
+        return {t["symbol"]: fnum(t.get("price")) for t in (self._get("/ticker/price") or [])}

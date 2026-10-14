@@ -7,3 +7,4 @@ data/*.db
 reports/*
 !reports/.keep
 data/*.json
+data/cache/

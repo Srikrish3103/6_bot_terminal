@@ -27,7 +27,7 @@ def state_json(st: State, eng: Engine) -> dict:
         unreal = sum(p["upnl_base"] for p in st.positions)
         equity = st.start + st.realized + unreal
         scan = []
-        for r in st.scan[:30]:
+        for r in st.scan:
             q = st.quotes.get(r["key"], {})
             px = q.get("px", r["price"])
             scan.append({**r, "live": px, "prev": q.get("prev", px), "vs_scan": (px / q.get("ref", px) - 1) if q.get("ref") else 0,

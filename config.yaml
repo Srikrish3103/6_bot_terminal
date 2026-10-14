@@ -5,29 +5,42 @@ account:
   starting_equity: 1000000      # ₹10,00,000
 
 # ------------------------------------------------------------------ segments
+# universe: full  -> every listed instrument, liquidity pre-screened once a day
+# universe: list  -> only the `symbols` given (also used by --demo)
+universe_refresh_hours: 20      # rebuild symbol lists + pre-screen + 2y history this often
+
 segments:
   us_spot:
     enabled: true
-    top_n: 2                    # picks passed to the desk each cycle
-    symbols: [AAPL, NVDA, MSFT, AMZN, TSLA, META, GOOGL, AMD, AVGO, NFLX]
+    top_n: 5                    # picks passed to the desk each cycle
+    universe: full              # NYSE + Nasdaq + AMEX (NASDAQ Trader symbol files)
+    include_etfs: false
+    min_price: 5                # USD
+    min_adv: 20000000           # 20-day avg traded value, USD ($20M)
     fractional: true            # INDmoney allows fractional US shares
+    symbols: [AAPL, NVDA, MSFT, AMZN, TSLA, META, GOOGL, AMD, AVGO, NFLX]
 
   in_spot:
     enabled: true
-    top_n: 2
+    top_n: 5
+    universe: full              # every NSE EQ-series stock (EQUITY_L.csv)
+    min_price: 20               # INR
+    min_adv: 100000000          # 20-day avg traded value, INR (₹10 cr)
     symbols: [RELIANCE.NS, HDFCBANK.NS, ICICIBANK.NS, INFY.NS, TCS.NS, SBIN.NS,
               BHARTIARTL.NS, LT.NS, ITC.NS, AXISBANK.NS, KOTAKBANK.NS, TATAMOTORS.NS]
 
   crypto_spot:
     enabled: true
-    top_n: 2
-    symbols: [BTC-USD, ETH-USD, SOL-USD, BNB-USD, XRP-USD, ADA-USD, DOGE-USD, AVAX-USD, LINK-USD]
+    top_n: 4
+    universe: full              # every Binance spot USDT pair (stablecoins / leveraged tokens excluded)
+    min_adv: 5000000            # 24h quote volume, USD ($5M)
     fractional: true
+    symbols: [BTC-USD, ETH-USD, SOL-USD, BNB-USD, XRP-USD, ADA-USD, DOGE-USD, AVAX-USD, LINK-USD]
 
   in_fno:
     enabled: true
-    top_n: 3
-    universe: full              # full = every NSE F&O underlying (lot sizes from NSE)
+    top_n: 4
+    universe: full              # every NSE F&O underlying (lot sizes from NSE)
     indices: [NIFTY, BANKNIFTY, FINNIFTY, MIDCPNIFTY, NIFTYNXT50]
     instrument: options         # options | futures  (options falls back to futures if no chain)
     min_dte: 3                  # skip expiries closer than this (days)
@@ -35,13 +48,16 @@ segments:
 
   crypto_fut:
     enabled: true
-    top_n: 3
-    scan_top_by_turnover: 40    # Delta perpetuals ranked by 24h turnover
+    top_n: 4
+    universe: full              # every Delta Exchange India perpetual
+    min_adv: 1000000            # 24h turnover, USD ($1M)
 
   crypto_opt:
     enabled: true
     top_n: 2
-    underlyings: [BTC, ETH]     # Delta Exchange India options
+    universe: full              # every underlying Delta lists options on
+    min_strikes: 10
+    underlyings: [BTC, ETH]     # used when universe: list / demo
     min_dte: 2
     max_dte: 35
 
@@ -119,8 +135,8 @@ pulse:
 aegis:
   risk_per_trade_pct: 1.0      # max loss per trade, % equity
   max_position_pct: 20.0       # max notional (premium/margin for options) per position, % equity
-  max_gross_pct: 200.0
-  max_positions: 10
+  max_gross_pct: 300.0
+  max_positions: 20
   max_correlation: 0.75
   max_segment_pct:             # notional cap per segment, % equity
     us_spot: 40
