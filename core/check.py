@@ -8,7 +8,7 @@ from rich.table import Table
 from .derivs import nse_chain, delta_chain
 from .feeds import LiveFeeds
 from .instruments import Underlying
-from .sources import NSE, Binance, Delta, fnum, nse_equity_symbols, us_symbols
+from .sources import NSE, US_DIAG, Binance, Delta, fnum, nse_equity_symbols, us_symbols
 
 
 def run_check(cfg, con):
@@ -22,7 +22,7 @@ def run_check(cfg, con):
             ok, sample = fn()
         except Exception as e:  # noqa
             ok, sample = False, f"{type(e).__name__}: {e}"
-        t.add_row(name, ("[green]OK" if ok else "[red]FAIL") + f" [dim]{time.time() - t0:.1f}s", str(sample)[:160])
+        t.add_row(name, ("[green]OK" if ok else "[red]FAIL") + f" [dim]{time.time() - t0:.1f}s", str(sample)[:240])
 
     def yf_spot():
         import yfinance as yf
@@ -38,7 +38,7 @@ def run_check(cfg, con):
 
     def us_list():
         n = us_symbols(False, cfg["http_timeout"])
-        return len(n) > 3000, f"{len(n):,} US common stocks (NYSE/Nasdaq/AMEX) · e.g. {', '.join(list(n)[:5])}"
+        return len(n) > 3000, f"{len(n):,} US stocks · " + " | ".join(US_DIAG)
 
     def in_list():
         n = nse_equity_symbols(cfg["http_timeout"])

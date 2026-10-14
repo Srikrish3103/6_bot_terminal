@@ -22,7 +22,8 @@ import pandas as pd
 from .data import synthetic_candles
 from .instruments import (DELTA_OPT_CONTRACT, DELTA_PERP_FALLBACK, FNO_FALLBACK, INDEX_YF, SEGMENTS,
                           Underlying)
-from .sources import NSE, Binance, Delta, fnum, nse_equity_symbols, parse_delta_option_symbol, us_symbols
+from .sources import (NSE, US_QUICK, Binance, Delta, fnum, nse_equity_symbols, parse_delta_option_symbol,
+                      us_symbols)
 
 log = logging.getLogger("universe")
 CHUNK = 250
@@ -165,7 +166,13 @@ class MarketData:
         """names: {yf symbol: company}. Pre-screen on 1 month, then 2y for survivors."""
         listed = len(names)
         if c.get("universe", "full") == "full" and not self.demo:
-            light = yf_chunks(list(names), "1mo", self._prog(emit, f"{seg} pre-screen"))
+            cand = list(names)
+            if seg == "us_spot" and US_QUICK:
+                # screener gave today's price + $volume: drop clear non-starters before downloading
+                cand = [s for s in cand if s not in US_QUICK or
+                        (US_QUICK[s][0] >= c.get("min_price", 0) and US_QUICK[s][1] >= c.get("min_adv", 0) * 0.2)]
+                emit("KESTREL", "work", f"{seg}: {len(cand):,} of {listed:,} pass the quick price/volume cut")
+            light = yf_chunks(cand, "1mo", self._prog(emit, f"{seg} pre-screen"))
             keep = [s for s, df in light.items()
                     if len(df) >= 10 and df["Close"].iloc[-1] >= c.get("min_price", 0) and adv(df) >= c.get("min_adv", 0)]
             emit("KESTREL", "work", f"{seg}: {len(keep):,} of {listed:,} pass liquidity — fetching 2y history…")

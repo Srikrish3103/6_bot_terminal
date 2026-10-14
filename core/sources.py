@@ -198,30 +198,90 @@ _BAD_NAME = re.compile(r"\b(warrants?|rights?|units?|preferred|debentures?|notes
                        r"depositary shares? representing|beneficial interests?|acquisition corp)\b|\d%", re.I)
 
 
-def us_symbols(include_etfs=False, timeout=15) -> dict[str, str]:
-    """{yfinance symbol: company name} for every NYSE / Nasdaq / AMEX common stock (+ETFs if asked)."""
+US_DIAG: list[str] = []                  # what each US-list source returned (shown by --check)
+US_QUICK: dict[str, tuple] = {}          # sym -> (last price, 1-day $ volume) when the source provides it
+
+
+def _keep_us(sym, name):
+    return sym and not any(c in sym for c in "$^+=") and not _BAD_NAME.search(name or "")
+
+
+def _us_from_nasdaqtrader(include_etfs, timeout):
     out = {}
     for url in NASDAQ_FILES:
-        try:
-            r = requests.get(url, timeout=timeout, headers={"User-Agent": BROWSER_UA})
-            lines = [l for l in r.text.splitlines() if l and not l.startswith("File Creation Time")]
-            hdr = lines[0].split("|")
-            for line in lines[1:]:
-                row = dict(zip(hdr, line.split("|")))
-                sym = row.get("Symbol") or row.get("ACT Symbol") or ""
-                name = row.get("Security Name", "")
-                if not sym or row.get("Test Issue") == "Y":
-                    continue
-                if row.get("ETF") == "Y" and not include_etfs:
-                    continue
-                if any(c in sym for c in "$^+=") or _BAD_NAME.search(name):
-                    continue
-                if row.get("Financial Status", "N") not in ("N", "", None):
-                    continue           # deficient / delinquent / bankrupt
+        r = requests.get(url, timeout=timeout, headers={"User-Agent": BROWSER_UA})
+        if r.status_code != 200 or "|" not in r.text[:300]:
+            raise RuntimeError(f"HTTP {r.status_code}, {r.headers.get('content-type', '')} (not a symbol file)")
+        lines = [l for l in r.text.splitlines() if l and not l.startswith("File Creation Time")]
+        hdr = lines[0].split("|")
+        for line in lines[1:]:
+            row = dict(zip(hdr, line.split("|")))
+            sym = row.get("Symbol") or row.get("ACT Symbol") or ""
+            name = row.get("Security Name", "")
+            if row.get("Test Issue") == "Y" or (row.get("ETF") == "Y" and not include_etfs):
+                continue
+            if row.get("Financial Status", "N") not in ("N", "", None):
+                continue           # deficient / delinquent / bankrupt
+            if _keep_us(sym, name):
                 out[sym.replace(".", "-")] = name.split(" - ")[0].strip()
-        except Exception as e:  # noqa
-            log.warning("US symbol file %s failed: %s", url, e)
     return out
+
+
+def _screener_rows(rows):
+    out = {}
+    for r in rows:
+        sym = (r.get("symbol") or "").strip().replace("/", "-").replace(".", "-")
+        name = (r.get("name") or "").strip()
+        if not _keep_us(sym, name):
+            continue
+        out[sym] = name.replace(" Common Stock", "").replace(" Class A", " (A)").strip()
+        px = fnum(str(r.get("lastsale", "")).replace("$", "").replace(",", ""))
+        vol = fnum(str(r.get("volume", "")).replace(",", ""))
+        if px:
+            US_QUICK[sym] = (px, px * vol)
+    return out
+
+
+def _us_from_nasdaq_api(timeout):
+    r = requests.get("https://api.nasdaq.com/api/screener/stocks",
+                     params={"tableonly": "true", "limit": "25", "offset": "0", "download": "true"},
+                     headers={"User-Agent": BROWSER_UA, "Accept": "application/json, text/plain, */*",
+                              "Origin": "https://www.nasdaq.com", "Referer": "https://www.nasdaq.com/"},
+                     timeout=timeout)
+    if r.status_code != 200:
+        raise RuntimeError(f"HTTP {r.status_code}")
+    rows = ((r.json().get("data") or {}).get("rows")) or []
+    return _screener_rows(rows)
+
+
+def _us_from_github(timeout):
+    out = {}
+    for ex in ("nasdaq", "nyse", "amex"):
+        url = f"https://raw.githubusercontent.com/rreichel3/US-Stock-Symbols/main/{ex}/{ex}_full_tickers.json"
+        r = requests.get(url, timeout=timeout)
+        if r.status_code != 200:
+            raise RuntimeError(f"{ex}: HTTP {r.status_code}")
+        out.update(_screener_rows(r.json()))
+    return out
+
+
+def us_symbols(include_etfs=False, timeout=15) -> dict[str, str]:
+    """{yfinance symbol: company} for every NYSE / Nasdaq / AMEX common stock.
+    Tries NASDAQ Trader files, then the Nasdaq screener API, then a daily GitHub mirror."""
+    US_DIAG.clear()
+    US_QUICK.clear()
+    for label, fn in (("nasdaqtrader.com", lambda: _us_from_nasdaqtrader(include_etfs, timeout)),
+                      ("api.nasdaq.com screener", lambda: _us_from_nasdaq_api(timeout)),
+                      ("GitHub mirror (rreichel3/US-Stock-Symbols)", lambda: _us_from_github(timeout))):
+        try:
+            out = fn()
+            US_DIAG.append(f"{label}: {len(out):,}")
+            if len(out) > 3000:
+                return out
+        except Exception as e:  # noqa
+            US_DIAG.append(f"{label}: FAIL {type(e).__name__}: {str(e)[:80]}")
+            log.warning("US list via %s failed: %s", label, e)
+    return {}
 
 
 def nse_equity_symbols(timeout=15) -> dict[str, str]:
